@@ -5,6 +5,8 @@ import { useLanguage } from "../../contexts/LanguageContext";
 
 interface WeatherWidgetProps {
   showForecast?: boolean;
+  /** "glass" = transparent liquid-glass panel (for dark hero backgrounds); "solid" = original opaque card (default) */
+  variant?: "glass" | "solid";
 }
 
 // --- Open-Meteo API helpers ---
@@ -356,7 +358,7 @@ function WeatherIcon({ condition }: { condition: string }) {
 // MAIN WEATHER WIDGET
 // ============================================================
 
-export default function WeatherWidget({ showForecast = true }: WeatherWidgetProps) {
+export default function WeatherWidget({ showForecast = true, variant = "solid" }: WeatherWidgetProps) {
   const { city, district, state, latitude, longitude, refreshLocation } = useLocation();
   const { t } = useLanguage();
   const [weather, setWeather] = useState<any | null>(null);
@@ -418,9 +420,17 @@ export default function WeatherWidget({ showForecast = true }: WeatherWidgetProp
 
   useEffect(() => { fetchWeather(); }, [fetchWeather]);
 
+  const glass = variant === "glass";
+
   if (loading) {
     return (
-      <div className="bg-gradient-to-br from-sky-500 via-blue-500 to-blue-600 backdrop-blur-md rounded-2xl p-6 border border-white/20 text-white flex items-center justify-center min-h-[160px]">
+      <div
+        className={`rounded-2xl p-6 border text-white flex items-center justify-center min-h-[160px] ${
+          glass
+            ? "liquid-glass border-white/40"
+            : "bg-gradient-to-br from-sky-500 via-blue-500 to-blue-600 backdrop-blur-md border-white/20"
+        }`}
+      >
         <RefreshCw className="w-6 h-6 animate-spin text-white" />
       </div>
     );
@@ -444,7 +454,15 @@ export default function WeatherWidget({ showForecast = true }: WeatherWidgetProp
   else if (condLower.includes("snow")) bgClass = "bg-gradient-to-br from-blue-400 via-blue-500 to-slate-500";
 
   return (
-    <div className={`${bgClass} backdrop-blur-md rounded-3xl p-6 text-white border border-white/20 shadow-xl space-y-5 relative overflow-hidden`}>
+    <div
+      className={`${
+        glass
+          ? "liquid-glass"
+          : `${bgClass} backdrop-blur-md`
+      } rounded-3xl p-6 text-white border shadow-xl space-y-5 relative overflow-hidden ${
+        glass ? "border-white/40" : "border-white/20"
+      }`}
+    >
       <WeatherAnimation condition={current.condition} />
 
       {/* Location header */}
