@@ -1,7 +1,8 @@
-import React from "react";
-import { Calendar, Sun, Cloud, CloudRain, Wind, Droplets, CheckCircle2, AlertTriangle } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Calendar, Sun, Cloud, CloudRain, Wind, Droplets, CheckCircle2, AlertTriangle, Clock } from "lucide-react";
 import WeatherWidget from "../components/weather/WeatherWidget";
 import { useLanguage } from "../contexts/LanguageContext";
+import { fetchWeatherHistory, WeatherHistoryRow } from "../lib/supabaseData";
 
 const HARVEST_WINDOWS_KEYS = [
   { dayKey: "dayToday", conditionKey: "condClear", recommendation: "optimal", icon: Sun, color: "text-emerald-600", bg: "bg-emerald-50 border-emerald-200", temp: "32°C", rain: "0%" },
@@ -20,8 +21,21 @@ const RECOMMENDATION_CONFIG: Record<string, { labelKey: string; icon: any; color
   avoid: { labelKey: "harvestAvoid", icon: AlertTriangle, color: "text-rose-600" },
 };
 
+function formatDay(iso: string): string {
+  const d = new Date(`${iso}T00:00:00`);
+  return `${d.getDate()} ${d.toLocaleString("en", { month: "short" })}`;
+}
+
 export default function WeatherPage() {
   const { t } = useLanguage();
+  const [history, setHistory] = useState<WeatherHistoryRow[]>([]);
+
+  // Load the stored 10-day weather history from the database
+  useEffect(() => {
+    fetchWeatherHistory(10)
+      .then((rows) => setHistory(rows.slice(-10).reverse()))
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6 lg:px-8">
@@ -36,6 +50,37 @@ export default function WeatherPage() {
         </div>
 
         <WeatherWidget showForecast={true} />
+
+        {/* Last 10 Days — stored weather history (database) */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <Clock className="w-5 h-5 text-blue-600" />
+            <h2 className="text-base font-bold text-slate-900">Last 10 Days — Saved Weather History</h2>
+          </div>
+          <p className="text-xs text-slate-500 mb-4">
+            A snapshot is saved to the database automatically each day weather is fetched, and records older than 10 days are removed automatically.
+          </p>
+          {history.length === 0 ? (
+            <p className="text-xs text-slate-400 py-6 text-center">
+              No stored weather yet — snapshots appear here as you use the weather widget (one per day).
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+              {history.map((row) => (
+                <div key={row.id ?? row.weather_date} className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-center hover:shadow-sm transition-all">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase">{formatDay(row.weather_date)}</p>
+                  <p className="text-lg font-extrabold text-slate-900">{row.temperature}°C</p>
+                  <p className="text-[10px] text-slate-500 font-medium">{row.condition}</p>
+                  <div className="mt-1.5 space-y-0.5">
+                    <p className="text-[10px] text-blue-600 font-semibold">💧 {row.humidity}% humidity</p>
+                    <p className="text-[10px] text-sky-600 font-semibold">🌧 {row.rainfall_chance}% rain</p>
+                    <p className="text-[10px] text-slate-500">💨 {row.wind_speed} km/h</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Harvest Window Advisory */}
         <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm">

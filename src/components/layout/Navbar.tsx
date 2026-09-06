@@ -42,9 +42,11 @@ export default function Navbar() {
             <Link to="/dealers" className="px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors">
               {t("dealers")}
             </Link>
-            <Link to="/inventory" className="px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors">
-              {t("fasalStock")}
-            </Link>
+            {user && (
+              <Link to="/inventory" className="px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors">
+                {t("fasalStock")}
+              </Link>
+            )}
             <Link to="/mandi-prices" className="px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors">
               {t("mandiBhaav")}
             </Link>

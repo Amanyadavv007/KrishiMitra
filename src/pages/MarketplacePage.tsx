@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { Store, Search, Camera, Image, MapPin, Star, MessageCircle, Package, ArrowRight, X, Send, Filter } from "lucide-react";
 import { useLanguage } from "../contexts/LanguageContext";
+import { useAuth } from "../contexts/AuthContext";
+import { createOrder } from "../lib/supabaseData";
 
 interface ProduceListing {
   id: string;
@@ -42,6 +44,7 @@ const CROPS = ["All", "Paddy", "Tomato", "Mustard", "Potato", "Maize", "Brinjal"
 
 export default function MarketplacePage() {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [listings] = useState<ProduceListing[]>(MOCK_LISTINGS);
   const [filter, setFilter] = useState("All");
   const [search, setSearch] = useState("");
@@ -52,6 +55,8 @@ export default function MarketplacePage() {
   ]);
   const [chatInput, setChatInput] = useState("");
   const [showPostForm, setShowPostForm] = useState(false);
+  const [placingId, setPlacingId] = useState<string | null>(null);
+  const [placedIds, setPlacedIds] = useState<Record<string, boolean>>({});
 
   const filtered = listings.filter((l) => {
     const matchCrop = filter === "All" || l.crop.includes(filter);
@@ -72,6 +77,36 @@ export default function MarketplacePage() {
     setTimeout(() => {
       setChatMessages((prev) => [...prev, { id: Date.now().toString(), sender: "seller", text: "Thanks for your message! Let me check and get back to you.", time: "Now" }]);
     }, 1500);
+  };
+
+  // Create a permanent order record in the database (orders table)
+  const placeOrder = async (listing: ProduceListing) => {
+    setPlacingId(listing.id);
+    try {
+      const qtyKg = listing.unit === "quintal" ? listing.quantity * 100 : listing.quantity;
+      await createOrder({
+        farmer_id: user?.id ?? null,
+        buyer_name: user?.name || "Guest Buyer",
+        crop: listing.crop,
+        quantity: listing.quantity,
+        unit: listing.unit,
+        amount: Math.round(qtyKg * listing.pricePerKg),
+        status: "pending",
+        items: {
+          listing_id: listing.id,
+          seller: listing.sellerName,
+          seller_type: listing.sellerType,
+          grade: listing.grade,
+          price_per_kg: listing.pricePerKg,
+          location: listing.location,
+        },
+      });
+      setPlacedIds((prev) => ({ ...prev, [listing.id]: true }));
+    } catch {
+      // order creation failed — button resets so the farmer can retry
+    } finally {
+      setPlacingId(null);
+    }
   };
 
   return (
@@ -149,8 +184,16 @@ export default function MarketplacePage() {
                     <MessageCircle className="w-3.5 h-3.5" />
                     Contact Seller
                   </button>
-                  <button className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold cursor-pointer">
-                    Place Order
+                  <button
+                    onClick={() => placeOrder(listing)}
+                    disabled={placingId === listing.id || placedIds[listing.id]}
+                    className={`px-3 py-2 rounded-xl text-[11px] font-semibold cursor-pointer disabled:cursor-default ${
+                      placedIds[listing.id]
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                    }`}
+                  >
+                    {placingId === listing.id ? "Placing…" : placedIds[listing.id] ? "Order Placed ✓" : "Place Order"}
                   </button>
                 </div>
               </div>

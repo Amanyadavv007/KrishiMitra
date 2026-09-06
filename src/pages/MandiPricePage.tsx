@@ -3,6 +3,7 @@ import { TrendingUp, TrendingDown, MapPin, Sparkles, RefreshCw, ArrowUp, ArrowDo
 import { logSearch } from "../contexts/AuthContext";
 import { useAuth } from "../contexts/AuthContext";
 import { useLanguage } from "../contexts/LanguageContext";
+import { fetchMandiHistory, saveMandiSnapshot, MandiHistoryRow, todayStr } from "../lib/supabaseData";
 
 interface MandiPrice {
   id: string;
@@ -233,6 +234,11 @@ export default function MandiPricePage() {
   const [selectedLocation, setSelectedLocation] = useState<{ city: string; state: string; district: string } | null>(null);
   const [gpsLocation, setGpsLocation] = useState({ city: "", state: "" });
   const [locationLoading, setLocationLoading] = useState(true);
+  // Stored 14-day mandi price history (from the database)
+  const [dbHistory, setDbHistory] = useState<MandiHistoryRow[]>([]);
+  useEffect(() => {
+    fetchMandiHistory(14).then(setDbHistory).catch(() => {});
+  }, []);
   const searchRef = useRef<HTMLDivElement>(null);
 
   // Auto-detect GPS location
@@ -348,8 +354,53 @@ export default function MandiPricePage() {
   const bestMandi = mandis.length > 0 ? mandis.reduce((b, c) => (c.price > b.price ? c : b), mandis[0]) : null;
   const worstMandi = mandis.length > 0 ? mandis.reduce((w, c) => (c.price < w.price ? c : w), mandis[0]) : null;
   const avgPrice = mandis.length > 0 ? Math.round(mandis.reduce((s, p) => s + p.price, 0) / mandis.length) : 0;
-  const history = PRICE_HISTORY[selectedCrop] || [];
   const predictions = PREDICTIONS[selectedCrop] || [];
+
+  // Persist today's mandi price snapshot into the database (rolling 14-day
+  // history), then refresh the stored history so the chart uses real rows.
+  const persistKeyRef = useRef("");
+  useEffect(() => {
+    const key = `${displayState}|${selectedLocation?.city || ""}|${selectedLocation?.district || ""}|${selectedCrop}`;
+    if (persistKeyRef.current === key) return;
+    persistKeyRef.current = key;
+    const rows = getMandis().map((m) => ({
+      mandi: m.mandi,
+      district: m.district,
+      state: m.state,
+      crop: m.crop,
+      price: m.price,
+      unit: m.unit,
+      price_date: todayStr(),
+      change: m.change,
+      change_percent: m.changePercent,
+    }));
+    saveMandiSnapshot(rows)
+      .then(() => fetchMandiHistory(14))
+      .then(setDbHistory)
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayState, selectedLocation, selectedCrop]);
+
+  // Merge DB-stored history for the selected crop with the static fallback
+  const dbPoints = dbHistory
+    .filter((r) => r.crop === selectedCrop)
+    .reduce<{ date: string; price: number; _d: string }[]>((acc, r) => {
+      const found = acc.find((p) => p._d === r.price_date);
+      if (found) {
+        found.price = Math.round((found.price + r.price) / 2);
+      } else {
+        const d = new Date(`${r.price_date}T00:00:00`);
+        acc.push({
+          _d: r.price_date,
+          price: r.price,
+          date: `${d.getDate()} ${d.toLocaleString("en", { month: "short" })}`,
+        });
+      }
+      return acc;
+    }, [])
+    .sort((a, b) => a._d.localeCompare(b._d))
+    .map(({ date, price }) => ({ date, price }));
+  const history = dbPoints.length >= 2 ? dbPoints : PRICE_HISTORY[selectedCrop] || [];
 
   return (
     <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6 lg:px-8">

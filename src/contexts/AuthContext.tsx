@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { supabase, isSupabaseConfigured } from "../lib/supabaseClient";
+import { hashPin, normalizePhone, isValidPin } from "../lib/pin";
 
 export interface User {
   id: string;
@@ -15,28 +16,45 @@ export interface User {
   createdAt: string;
 }
 
+export interface RegisterInput {
+  name: string;
+  phone: string;
+  pin: string;
+  village: string;
+  city: string;
+  state: string;
+  district: string;
+  pincode: string;
+  address: string;
+  role: "FARMER" | "DEALER" | "ADMIN";
+}
+
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  sendOTP: (phone: string) => Promise<string>;
-  verifyOTP: (phone: string, otp: string) => Promise<boolean>;
-  register: (data: Omit<User, "id" | "createdAt"> & { pincode: string }) => Promise<{ success: boolean; error?: string }>;
+  login: (phone: string, pin: string) => Promise<{ success: boolean; error?: string }>;
+  register: (data: RegisterInput) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
-  updateProfile: (data: Partial<User>) => void;
+  updateProfile: (data: Partial<User>) => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
-  sendOTP: async () => "",
-  verifyOTP: async () => false,
+  login: async () => ({ success: false }),
   register: async () => ({ success: false }),
   logout: () => {},
-  updateProfile: () => {},
+  updateProfile: async () => {},
+  refreshUser: async () => {},
 });
 
-// ---- localStorage fallback helpers ----
-function getLocalUsers(): (User & { password?: string })[] {
+// ---- localStorage fallback helpers (offline/demo mode) ----
+interface LocalUser extends User {
+  pinHash: string;
+}
+
+function getLocalUsers(): LocalUser[] {
   try {
     return JSON.parse(localStorage.getItem("agn_registered_users") || "[]");
   } catch {
@@ -44,11 +62,27 @@ function getLocalUsers(): (User & { password?: string })[] {
   }
 }
 
-function saveLocalUsers(users: (User & { password?: string })[]) {
+function saveLocalUsers(users: LocalUser[]) {
   localStorage.setItem("agn_registered_users", JSON.stringify(users));
 }
 
-// Log search to Supabase or localStorage
+function mapFarmerRow(row: any): User {
+  return {
+    id: row.id,
+    name: row.name || "",
+    phone: row.phone || "",
+    city: row.city || "",
+    state: row.state || "",
+    district: row.district || "",
+    pincode: row.pincode || "",
+    village: row.village || "",
+    address: row.address || "",
+    role: row.role || "FARMER",
+    createdAt: row.created_at || new Date().toISOString(),
+  };
+}
+
+// Log search to Supabase or localStorage (used by Mandi pages)
 export async function logSearch(
   farmerId: string | null,
   searchType: string,
@@ -65,7 +99,6 @@ export async function logSearch(
       location: location || "",
     });
   }
-  // Also store in localStorage as backup
   try {
     const history = JSON.parse(localStorage.getItem("agn_search_history") || "[]");
     history.unshift({
@@ -77,7 +110,6 @@ export async function logSearch(
       location,
       createdAt: new Date().toISOString(),
     });
-    // Keep last 200 searches
     localStorage.setItem("agn_search_history", JSON.stringify(history.slice(0, 200)));
   } catch {
     // ignore
@@ -95,295 +127,182 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
   const [loading, setLoading] = useState(false);
 
-  // OTP store for localStorage fallback mode
-  const [otpStore, setOtpStore] = useState<Record<string, { otp: string; expiresAt: number }>>({});
+// ---- LOGIN with Mobile Number + PIN ----
+  const login = useCallback(
+    async (phone: string, pin: string): Promise<{ success: boolean; error?: string }> => {
+      try {
+        const cleanPhone = normalizePhone(phone);
+        if (!isValidPin(pin)) {
+          return { success: false, error: "PIN must be 4 to 6 digits." };
+        }
+        const pinHash = await hashPin(pin);
 
-  // On mount: if Supabase configured, check session
-  useEffect(() => {
-    if (!isSupabaseConfigured() || !supabase) return;
+        if (isSupabaseConfigured() && supabase) {
+          const { data, error } = await supabase
+            .from("farmers")
+            .select("*")
+            .eq("phone", cleanPhone)
+            .single();
 
-    try {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_IN" && session?.user) {
-        // Fetch profile from farmers table
-        const { data: profile } = await supabase
-          .from("farmers")
-          .select("*")
-          .eq("id", session.user.id)
-          .single();
+          if (error || !data) {
+            return { success: false, error: "Account not found. Please register first." };
+          }
+          if (!data.pin_hash) {
+            return { success: false, error: "No PIN set on this account. Please register again with a PIN." };
+          }
+          if (data.pin_hash !== pinHash) {
+            return { success: false, error: "Invalid mobile number or PIN." };
+          }
 
-        if (profile) {
-          const u: User = {
-            id: profile.id,
-            name: profile.name,
-            phone: profile.phone,
-            city: profile.city,
-            state: profile.state,
-            district: profile.district,
-            pincode: profile.pincode,
-            village: profile.village,
-            address: profile.address,
-            role: profile.role,
-            createdAt: profile.created_at,
-          };
+          const u = mapFarmerRow(data);
           setUser(u);
           localStorage.setItem("agn_current_user", JSON.stringify(u));
+          return { success: true };
         }
-      } else if (event === "SIGNED_OUT") {
-        setUser(null);
-        localStorage.removeItem("agn_current_user");
+
+        // localStorage fallback
+        const users = getLocalUsers();
+        const found = users.find((x) => x.phone.replace(/\D/g, "") === cleanPhone.replace(/\D/g, ""));
+        if (!found) return { success: false, error: "Account not found. Please register first." };
+        if (found.pinHash !== pinHash) return { success: false, error: "Invalid mobile number or PIN." };
+        const { pinHash: _ph, ...pubUser } = found;
+        setUser(pubUser);
+        localStorage.setItem("agn_current_user", JSON.stringify(pubUser));
+        return { success: true };
+      } catch (e: any) {
+        return { success: false, error: e?.message || "Login failed. Please try again." };
       }
-    });
+    },
+    []
+  );
 
-      return () => subscription.unsubscribe();
-    } catch (err) {
-      console.warn("[AgriNexus] Supabase auth listener failed, using local mode:", err);
-    }
-  }, []);
+// ---- REGISTER with Mobile Number + PIN ----
+  const register = useCallback(
+    async (data: RegisterInput): Promise<{ success: boolean; error?: string }> => {
+      try {
+        const cleanPhone = normalizePhone(data.phone);
+        if (!data.name.trim()) return { success: false, error: "Please enter your name." };
+        if (cleanPhone.replace(/\D/g, "").length < 10) {
+          return { success: false, error: "Please enter a valid 10-digit mobile number." };
+        }
+        if (!isValidPin(data.pin)) {
+          return { success: false, error: "PIN must be 4 to 6 digits." };
+        }
+        const pinHash = await hashPin(data.pin);
 
-  // ---- Send OTP ----
-  const sendOTP = useCallback(async (phone: string): Promise<string> => {
-    const cleanPhone = phone.replace(/\D/g, "");
-    const otp = String(Math.floor(100000 + Math.random() * 900000));
+        if (isSupabaseConfigured() && supabase) {
+          const { data: existing } = await supabase.from("farmers").select("id").eq("phone", cleanPhone).maybeSingle();
+          if (existing) {
+            return { success: false, error: "This mobile number is already registered. Please login instead." };
+          }
 
-    if (isSupabaseConfigured() && supabase) {
-      // Store OTP in Supabase (for demo — in production use Twilio/MSG91)
-      const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-      await supabase.from("otp_codes").insert({
-        phone: cleanPhone,
-        otp,
-        expires_at: expiresAt,
-      });
-    } else {
-      // localStorage fallback
-      const expiresAt = Date.now() + 5 * 60 * 1000;
-      setOtpStore((prev) => ({ ...prev, [cleanPhone]: { otp, expiresAt } }));
-    }
+          const { data: created, error } = await supabase
+            .from("farmers")
+            .insert({
+              phone: cleanPhone,
+              name: data.name.trim(),
+              village: data.village || "",
+              city: data.city || "",
+              state: data.state || "",
+              district: data.district || "",
+              pincode: data.pincode || "",
+              address: data.address || "",
+              role: data.role || "FARMER",
+              pin_hash: pinHash,
+            })
+            .select()
+            .single();
 
-    console.log(`[AgriNexus OTP] Your OTP for ${phone} is: ${otp}`);
-    return otp;
-  }, []);
+          if (error) {
+            return { success: false, error: `Registration failed: ${error.message}` };
+          }
 
-  // ---- Verify OTP ----
-  const verifyOTP = useCallback(async (phone: string, otp: string): Promise<boolean> => {
-    const cleanPhone = phone.replace(/\D/g, "");
+          const u = mapFarmerRow(created);
+          setUser(u);
+          localStorage.setItem("agn_current_user", JSON.stringify(u));
+          await supabase.from("activity_log").insert({
+            farmer_id: u.id,
+            action: "register",
+            details: { name: u.name, city: u.city, state: u.state },
+          });
+          return { success: true };
+        }
 
-    if (isSupabaseConfigured() && supabase) {
-      // Check OTP from Supabase
-      const { data } = await supabase
-        .from("otp_codes")
-        .select("*")
-        .eq("phone", cleanPhone)
-        .eq("otp", otp)
-        .eq("verified", false)
-        .gt("expires_at", new Date().toISOString())
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
-
-      if (!data) return false;
-
-      // Mark OTP as verified
-      await supabase.from("otp_codes").update({ verified: true }).eq("id", data.id);
-
-      // Check if farmer exists
-      const { data: farmer } = await supabase
-        .from("farmers")
-        .select("*")
-        .eq("phone", cleanPhone)
-        .single();
-
-      if (farmer) {
-        const u: User = {
-          id: farmer.id,
-          name: farmer.name,
-          phone: farmer.phone,
-          city: farmer.city,
-          state: farmer.state,
-          district: farmer.district,
-          pincode: farmer.pincode,
-          village: farmer.village,
-          address: farmer.address,
-          role: farmer.role,
-          createdAt: farmer.created_at,
-        };
-        setUser(u);
-        localStorage.setItem("agn_current_user", JSON.stringify(u));
-
-        // Log login activity
-        await supabase.from("activity_log").insert({
-          farmer_id: farmer.id,
-          action: "login",
-          details: { method: "otp", phone: cleanPhone },
-        });
-
-        return true;
-      }
-
-      // No farmer record — need to register first
-      return false;
-    } else {
-      // localStorage fallback
-      const stored = otpStore[cleanPhone];
-      if (!stored) return false;
-      if (Date.now() > stored.expiresAt) return false;
-      if (stored.otp !== otp) return false;
-
-      setOtpStore((prev) => {
-        const next = { ...prev };
-        delete next[cleanPhone];
-        return next;
-      });
-
-      // Find existing user
-      const users = getLocalUsers();
-      const existing = users.find((u) => u.phone.replace(/\D/g, "") === cleanPhone);
-      if (existing) {
-        setUser(existing);
-        localStorage.setItem("agn_current_user", JSON.stringify(existing));
-        return true;
-      }
-      return false;
-    }
-  }, [otpStore]);
-
-  // ---- Register ----
-  const register = useCallback(async (
-    data: Omit<User, "id" | "createdAt"> & { pincode: string }
-  ): Promise<{ success: boolean; error?: string }> => {
-    const cleanPhone = data.phone.replace(/\D/g, "");
-
-    if (isSupabaseConfigured() && supabase) {
-      // Check duplicate
-      const { data: existing } = await supabase
-        .from("farmers")
-        .select("id")
-        .eq("phone", cleanPhone)
-        .single();
-
-      if (existing) {
-        return { success: false, error: "This mobile number is already registered. Please login instead." };
-      }
-
-      // Insert new farmer
-      const { data: newFarmer, error } = await supabase
-        .from("farmers")
-        .insert({
+        // localStorage fallback
+        const users = getLocalUsers();
+        if (users.some((x) => x.phone.replace(/\D/g, "") === cleanPhone.replace(/\D/g, ""))) {
+          return { success: false, error: "This mobile number is already registered. Please login instead." };
+        }
+        const localUser: LocalUser = {
+          id: `user-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          name: data.name.trim(),
           phone: cleanPhone,
-          name: data.name,
-          village: data.village,
-          city: data.city,
-          state: data.state,
-          district: data.district,
-          pincode: data.pincode,
-          address: data.address,
+          city: data.city || "",
+          state: data.state || "",
+          district: data.district || "",
+          pincode: data.pincode || "",
+          village: data.village || "",
+          address: data.address || "",
           role: "FARMER",
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error("Registration error:", error);
-        return { success: false, error: "Registration failed. Please try again." };
+          createdAt: new Date().toISOString(),
+          pinHash,
+        };
+        users.push(localUser);
+        saveLocalUsers(users);
+        const { pinHash: _ph2, ...pubUser } = localUser;
+        setUser(pubUser);
+        localStorage.setItem("agn_current_user", JSON.stringify(pubUser));
+        return { success: true };
+      } catch (e: any) {
+        return { success: false, error: e?.message || "Registration failed. Please try again." };
       }
+    },
+    []
+  );
 
-      const u: User = {
-        id: newFarmer.id,
-        name: newFarmer.name,
-        phone: newFarmer.phone,
-        city: newFarmer.city,
-        state: newFarmer.state,
-        district: newFarmer.district,
-        pincode: newFarmer.pincode,
-        village: newFarmer.village,
-        address: newFarmer.address,
-        role: newFarmer.role,
-        createdAt: newFarmer.created_at,
-      };
-      setUser(u);
-      localStorage.setItem("agn_current_user", JSON.stringify(u));
-
-      // Log registration
-      await supabase.from("activity_log").insert({
-        farmer_id: newFarmer.id,
-        action: "register",
-        details: { name: data.name, city: data.city, state: data.state },
-      });
-
-      return { success: true };
-    } else {
-      // localStorage fallback
-      const users = getLocalUsers();
-      const existing = users.find((u) => u.phone.replace(/\D/g, "") === cleanPhone);
-      if (existing) {
-        return { success: false, error: "This mobile number is already registered. Please login instead." };
-      }
-
-      const newUser: User = {
-        id: `user-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        name: data.name,
-        phone: data.phone,
-        city: data.city,
-        state: data.state,
-        district: data.district || "",
-        pincode: data.pincode,
-        village: data.village,
-        address: data.address || "",
-        role: "FARMER",
-        createdAt: new Date().toISOString(),
-      };
-
-      users.push(newUser);
-      saveLocalUsers(users);
-      setUser(newUser);
-      localStorage.setItem("agn_current_user", JSON.stringify(newUser));
-      return { success: true };
-    }
-  }, []);
-
-  // ---- Logout ----
-  const logout = useCallback(async () => {
-    if (isSupabaseConfigured() && supabase) {
-      await supabase.auth.signOut();
-    }
+  // ---- LOGOUT ----
+  const logout = useCallback(() => {
     setUser(null);
     localStorage.removeItem("agn_current_user");
   }, []);
 
-  // ---- Update Profile ----
-  const updateProfile = useCallback(async (data: Partial<User>) => {
+  // ---- UPDATE PROFILE ----
+  const updateProfile = useCallback(async (patch: Partial<User>) => {
     if (!user) return;
-    const updated = { ...user, ...data };
+    const updated = { ...user, ...patch };
     setUser(updated);
     localStorage.setItem("agn_current_user", JSON.stringify(updated));
-
     if (isSupabaseConfigured() && supabase) {
-      const { id, createdAt: _ca, ...updateData } = updated;
+      const { id: _id, createdAt: _ca, role: _role, ...fields } = updated;
       await supabase
         .from("farmers")
-        .update({
-          name: updateData.name,
-          village: updateData.village,
-          city: updateData.city,
-          state: updateData.state,
-          district: updateData.district,
-          pincode: updateData.pincode,
-          address: updateData.address,
-          updated_at: new Date().toISOString(),
-        })
+        .update({ ...fields, updated_at: new Date().toISOString() })
         .eq("id", user.id);
     } else {
       const users = getLocalUsers();
-      const idx = users.findIndex((u) => u.id === user.id);
+      const idx = users.findIndex((x) => x.id === user.id);
       if (idx >= 0) {
-        users[idx] = { ...users[idx], ...data };
+        users[idx] = { ...users[idx], ...patch } as LocalUser;
         saveLocalUsers(users);
       }
     }
   }, [user]);
 
+  // ---- REFRESH USER (re-fetch the row from the database) ----
+  const refreshUser = useCallback(async () => {
+    if (!user) return;
+    if (isSupabaseConfigured() && supabase) {
+      const { data, error } = await supabase.from("farmers").select("*").eq("id", user.id).maybeSingle();
+      if (!error && data) {
+        const u = mapFarmerRow(data);
+        setUser(u);
+        localStorage.setItem("agn_current_user", JSON.stringify(u));
+      }
+    }
+  }, [user]);
+
   return (
-    <AuthContext.Provider value={{ user, loading, sendOTP, verifyOTP, register, logout, updateProfile }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, updateProfile, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

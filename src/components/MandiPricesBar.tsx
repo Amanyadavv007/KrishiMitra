@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { TrendingUp, TrendingDown, MapPin, ArrowRight, BarChart3 } from "lucide-react";
 import { useLocation } from "../contexts/LocationContext";
 import { useLanguage } from "../contexts/LanguageContext";
+import { saveMandiSnapshot, fetchMandiHistory, todayStr } from "../lib/supabaseData";
 
 // --- Mandi data (same database as MandiPricePage) ---
 const MANDI_LOCATIONS: { city: string; state: string; district: string; mandis: string[] }[] = [
@@ -141,8 +142,39 @@ export default function MandiPricesBar() {
     const resolvedCity = city || "Delhi";
     const data = getNearbyMandis(resolvedState, resolvedCity);
     // Only take first 2 mandis
-    setMandiData(data.slice(0, 2));
+    const shown = data.slice(0, 2);
+    setMandiData(shown);
     setLoading(false);
+    // Persist today's prices into the 14-day mandi price history database,
+    // then upgrade the sparklines with real stored history when available.
+    (async () => {
+      try {
+        await saveMandiSnapshot(
+          shown.map((m) => ({
+            mandi: m.mandi,
+            district: m.district,
+            state: m.state,
+            crop: m.crop,
+            price: m.price,
+            unit: "quintal",
+            price_date: todayStr(),
+            change: m.change,
+            change_percent: m.changePercent,
+          }))
+        );
+        const hist = await fetchMandiHistory(14);
+        setMandiData((prev) =>
+          prev.map((m) => {
+            const rows = hist
+              .filter((r) => r.mandi === m.mandi && r.crop === m.crop)
+              .sort((a, b) => a.price_date.localeCompare(b.price_date));
+            return rows.length >= 2 ? { ...m, history: rows.map((r) => r.price) } : m;
+          })
+        );
+      } catch {
+        // DB not migrated yet — synthetic sparkline history still shown
+      }
+    })();
   }, [state, city]);
 
   useEffect(() => {

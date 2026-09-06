@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { MapPin, RefreshCw, AlertTriangle } from "lucide-react";
 import { useLocation } from "../../contexts/LocationContext";
 import { useLanguage } from "../../contexts/LanguageContext";
+import { saveWeatherSnapshot, todayStr } from "../../lib/supabaseData";
 
 interface WeatherWidgetProps {
   showForecast?: boolean;
@@ -400,6 +401,23 @@ export default function WeatherWidget({ showForecast = true }: WeatherWidgetProp
       else if (current.condition === "Clear" && current.humidity < 50) advisory = t("advisoryGood") || "Good weather for fertilizer.";
       else advisory = t("advisoryFavorable") || "Favorable weather for field preparation.";
       setWeather({ current, forecast, advisory });
+      // Persist today's snapshot to the weather history database (last 10 days)
+      try {
+        await saveWeatherSnapshot({
+          city: city || "Delhi",
+          district: district || "New Delhi",
+          state: state || "Delhi",
+          weather_date: todayStr(),
+          temperature: current.temp,
+          humidity: current.humidity,
+          wind_speed: current.windSpeed,
+          rainfall_chance: current.rainfallChance,
+          condition: current.condition,
+          forecast_data: forecast,
+        });
+      } catch {
+        // snapshot save is non-critical
+      }
     } catch (err) {
       console.warn("Open-Meteo failed:", err);
       setError("Weather data temporarily unavailable");

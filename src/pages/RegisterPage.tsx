@@ -16,6 +16,8 @@ export default function RegisterPage() {
   const [gpsDone, setGpsDone] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [pin, setPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
   const { register } = useAuth();
   const navigate = useNavigate();
 
@@ -57,6 +59,8 @@ export default function RegisterPage() {
     if (!name.trim()) { setError("Please enter your name"); return; }
     const clean = phone.replace(/\D/g, "");
     if (clean.length < 10) { setError("Please enter a valid 10-digit mobile number"); return; }
+    if (!/^\d{4,6}$/.test(pin)) { setError("Please set a 4-6 digit PIN"); return; }
+    if (pin !== confirmPin) { setError("PIN and Confirm PIN do not match"); return; }
     if (!village.trim()) { setError("Please enter your village name"); return; }
     if (!city.trim()) { setError("Please enter your city"); return; }
 
@@ -66,6 +70,7 @@ export default function RegisterPage() {
       const result = await register({
         name: name.trim(),
         phone: fullPhone,
+        pin,
         village: village.trim(),
         address: address.trim(),
         city: city.trim(),
@@ -131,6 +136,37 @@ export default function RegisterPage() {
                 placeholder="10-digit number"
                 maxLength={10}
                 className="w-full px-3 py-2.5 rounded-r-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+          </div>
+
+          {/* PIN + Confirm PIN */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Create PIN *</label>
+              <input
+                type="password"
+                required
+                inputMode="numeric"
+                value={pin}
+                onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                placeholder="4-6 digits"
+                maxLength={6}
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+              <p className="text-[10px] text-slate-400 mt-1">Ye PIN har login par use hoga</p>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Confirm PIN *</label>
+              <input
+                type="password"
+                required
+                inputMode="numeric"
+                value={confirmPin}
+                onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                placeholder="Confirm PIN"
+                maxLength={6}
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
           </div>
