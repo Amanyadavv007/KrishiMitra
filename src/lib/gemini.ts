@@ -212,11 +212,13 @@ GROUNDING DATA (verified agricultural extension data):
 - Irrigation schedule: ${irrigation}
 - Fertilizer: ${kb.idealFertilizer}
 
-TASK: FIRST check whether the image shows anything related to agriculture — a crop, plant, leaf, stem, fruit, soil, seeds, pests, pesticide/fertilizer products, farm fields or farm equipment.
+TASK: FIRST decide whether the image is agricultural.
 
-REJECT (set isAgriImage false) if the image shows: a person, a hand, fingers, a face, any body part, a pet, a vehicle, a ceiling, a wall, a room, a food plate, a screenshot, or a random object. ALSO REJECT if the image is too blurry, too dark, or too unclear to identify any plant or crop subject — put "Image too unclear" in the summary.
+REJECT (set isAgriImage false) ONLY if the scene is CLEARLY not agriculture: a face or person filling the frame, a hand/fingers close-up, a domestic pet, furniture, a room interior, a food plate, a screenshot, or a solid-color graphic. ALSO REJECT only if the photo is so blurry, dark, or out-of-focus that NO plant/leaf/fruit can be identified at all.
 
-If it is a genuine agricultural subject: set "isAgriImage" to true and continue with the full diagnosis (if the plant is healthy, set disease to 'Healthy Plant'). If NOT agricultural or unclear: set "isAgriImage" to false, leave the other analysis fields empty, and put a one-line reason in "summary".
+If the image shows ANY plant, leaf, fruit, vegetable, crop, soil, field, farm tool, pesticide/fertilizer bottle, or farming scene — even with a messy background, water droplets, partial coverage, or other objects in the frame — treat it as agricultural (set isAgriImage true) and continue with the diagnosis. Real farm photos often have non-plant objects in the background; just focus on the plant/crop content.
+
+If it is agricultural: continue with the full diagnosis (if the plant is healthy, set disease to 'Healthy Plant'). If rejected: leave analysis fields empty and put a one-line reason in "summary".
 
 Respond ONLY with a JSON object (no markdown fences, no extra text) with EXACTLY these keys:
 {
