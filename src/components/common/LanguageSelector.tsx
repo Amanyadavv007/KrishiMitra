@@ -5,13 +5,13 @@ import { LanguageCode } from "../../utils/translations";
 
 const LANGUAGES: { code: LanguageCode; label: string; native: string }[] = [
   { code: "en", label: "English", native: "English" },
-  { code: "or", label: "Odia", native: "Odia" },
-  { code: "hi", label: "Hindi", native: "Hindi" },
-  { code: "bn", label: "Bengali", native: "Bengali" },
-  { code: "te", label: "Telugu", native: "Telugu" },
-  { code: "ta", label: "Tamil", native: "Tamil" },
-  { code: "kn", label: "Kannada", native: "Kannada" },
-  { code: "mr", label: "Marathi", native: "Marathi" },
+  { code: "hi", label: "Hindi", native: "हिन्दी" },
+  { code: "bn", label: "Bengali", native: "বাংলা" },
+  { code: "te", label: "Telugu", native: "తెలుగు" },
+  { code: "ta", label: "Tamil", native: "தமிழ்" },
+  { code: "kn", label: "Kannada", native: "ಕನ್ನಡ" },
+  { code: "mr", label: "Marathi", native: "मराठी" },
+  { code: "or", label: "Odia", native: "ଓଡ଼ିଆ" },
 ];
 
 export default function LanguageSelector() {
