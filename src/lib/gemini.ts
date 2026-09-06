@@ -176,8 +176,9 @@ export async function loadConversationHistory(
 
 // ============================================================
 // CROP DISEASE DIAGNOSIS — structured JSON via free Gemini LLM,
-// grounded in the local agriculture knowledge base, with an
-// offline rule-based fallback if the network fails.
+// grounded in the local agriculture knowledge base.
+// NOTE: we NEVER fabricate a diagnosis. If the AI call fails we
+// throw so the UI shows an honest error instead of fake data.
 // ============================================================
 
 export interface CropDiagnosis {
@@ -211,7 +212,11 @@ GROUNDING DATA (verified agricultural extension data):
 - Irrigation schedule: ${irrigation}
 - Fertilizer: ${kb.idealFertilizer}
 
-TASK: FIRST check whether the image shows anything related to agriculture — a crop, plant, leaf, soil, seeds, pests, pesticide/fertilizer products, farm fields or equipment. If it clearly does NOT (e.g. a person, selfie, pet, vehicle, food plate, random object, screenshot), set "isAgriImage" to false, leave the other analysis fields empty arrays / minimal, and put a one-line reason in "summary". Otherwise set "isAgriImage" to true and continue with the full diagnosis. If the plant part is healthy, set disease to 'Healthy Plant'.
+TASK: FIRST check whether the image shows anything related to agriculture — a crop, plant, leaf, stem, fruit, soil, seeds, pests, pesticide/fertilizer products, farm fields or farm equipment.
+
+REJECT (set isAgriImage false) if the image shows: a person, a hand, fingers, a face, any body part, a pet, a vehicle, a ceiling, a wall, a room, a food plate, a screenshot, or a random object. ALSO REJECT if the image is too blurry, too dark, or too unclear to identify any plant or crop subject — put "Image too unclear" in the summary.
+
+If it is a genuine agricultural subject: set "isAgriImage" to true and continue with the full diagnosis (if the plant is healthy, set disease to 'Healthy Plant'). If NOT agricultural or unclear: set "isAgriImage" to false, leave the other analysis fields empty, and put a one-line reason in "summary".
 
 Respond ONLY with a JSON object (no markdown fences, no extra text) with EXACTLY these keys:
 {
@@ -266,31 +271,37 @@ function extractJSON(text: string): CropDiagnosis | null {
 }
 
 /**
- * Offline rule-based fallback — uses the local knowledge base
- * so the feature still works without internet.
+ * Downscale + re-compress a camera image so the API accepts it.
+ * Phone cameras produce 3-8 MB photos; we cap at ~1280px JPEG q0.8.
  */
-function offlineDiagnosis(cropName: string, language: string): CropDiagnosis {
-  const kb = CROP_KNOWLEDGE[cropName] || CROP_KNOWLEDGE.Other;
-  const primary = kb.diseases[0];
-  const isHindi = language === "hi";
-  return {
-    isAgriImage: true,
-    disease: primary.name,
-    severity: "Medium",
-    confidence: 70,
-    symptoms: primary.symptoms,
-    organicTreatments: primary.organic,
-    chemicalTreatments: primary.chemical,
-    cause: primary.cause,
-    irrigationAdvice: kb.irrigation.map((i) => `${i.stage}: ${i.frequency} — ${i.amount} (${i.method})`),
-    soilAdvice: [
-      `Ideal soil pH ${kb.soil.ph[0]}-${kb.soil.ph[1]}`, isHindi ? "मिट्टी की जांच कराएं" : "Get a soil health card from your Krishi Vigyan Kendra",
-    ],
-    recommendedProducts: ["Neem Oil", isHindi ? "त्रिकोडर्मा बीज उपचार" : "Trichoderma Seed Treatment", isHindi ? "जैविक खाद" : "Organic Manure"],
-    summary: isHindi
-      ? `यह विश्लेषण ऑफलाइन कृषि डेटाबेस से किया गया है। ${kb.name} में ${primary.name} के लक्षण दिखाई दे रहे हैं। उपर दिए उपाय अपनाएं और ज़रूरत हो तो नज़दीकी कृषि विज्ञान केंद्र से संपर्क करें।`
-      : `This analysis used the offline agriculture database. ${kb.name} shows symptoms of ${primary.name}. Follow the treatments above and contact your nearest Krishi Vigyan Kendra if unsure.`,
-  };
+async function compressImage(imageDataUrl: string): Promise<{ base64: string; mimeType: string }> {
+  // Quick path: already small enough
+  const rawSize = imageDataUrl.length * 0.75;
+  if (rawSize < 400_000) {
+    const m = imageDataUrl.match(/^data:([^;]+);base64,/);
+    return { base64: imageDataUrl.replace(/^data:[^;]+;base64,/, ""), mimeType: m ? m[1] : "image/jpeg" };
+  }
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const maxDim = 1280;
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return reject(new Error("Canvas not supported"));
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const out = canvas.toDataURL("image/jpeg", 0.8);
+        resolve({ base64: out.replace(/^data:[^;]+;base64,/, ""), mimeType: "image/jpeg" });
+      } catch (e) {
+        reject(e);
+      }
+    };
+    img.onerror = () => reject(new Error("Invalid image"));
+    img.src = imageDataUrl;
+  });
 }
 
 export async function diagnoseCropImage(
@@ -298,44 +309,55 @@ export async function diagnoseCropImage(
   imageBase64: string,
   language: string = "en"
 ): Promise<CropDiagnosis> {
-  const cleanBase64 = imageBase64.replace(/^data:[^;]+;base64,/, "");
+  const { base64, mimeType } = await compressImage(imageBase64);
   const prompt = buildDiagnosisPrompt(cropName, language);
 
-  try {
-    const response = await fetch(GEMINI_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: prompt },
-              { inline_data: { mime_type: "image/jpeg", data: cleanBase64 } },
-            ],
+  let lastError: unknown = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      if (attempt > 0) await new Promise((r) => setTimeout(r, attempt * 1500));
+      const response = await fetch(GEMINI_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                { text: prompt },
+                { inline_data: { mime_type: mimeType, data: base64 } },
+              ],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.2,
+            maxOutputTokens: 2048,
           },
-        ],
-        generationConfig: {
-          temperature: 0.2,
-          maxOutputTokens: 2048,
-        },
-      }),
-    });
+        }),
+      });
 
-    if (!response.ok) throw new Error(`Gemini API error: ${response.status}`);
+      if (!response.ok) {
+        // 4xx = bad request (e.g. image rejected) — don't retry
+        if (response.status < 500 && response.status !== 429) throw new Error(`Gemini API error: ${response.status}`);
+        throw new Error(`Gemini API error: ${response.status}`);
+      }
 
-    const data: GeminiResponse = await response.json();
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!reply) throw new Error("Empty response");
+      const data: GeminiResponse = await response.json();
+      const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!reply) throw new Error("Empty response");
 
-    const parsed = extractJSON(reply);
-    if (parsed) return parsed;
-
-    // JSON parse failed — build from raw text
-    throw new Error("JSON parse failed");
-  } catch (err) {
-    console.warn("[AgriNexus] Online diagnosis failed, using offline knowledge base:", err);
-    return offlineDiagnosis(cropName, language);
+      const parsed = extractJSON(reply);
+      if (parsed) return parsed;
+      throw new Error("JSON parse failed");
+    } catch (err) {
+      lastError = err;
+      console.warn(`[AgriNexus] Diagnosis attempt ${attempt + 1} failed:`, err);
+    }
   }
+
+  // Do NOT fabricate a diagnosis. Surface an honest error to the farmer.
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("AI service is busy. Please try again in a moment.");
 }
 
 /**

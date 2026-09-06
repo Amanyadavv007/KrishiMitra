@@ -68,7 +68,9 @@ export default function AnalyzeCropPage() {
       navigate(`/analysis/${record.id}`);
     } catch (err: any) {
       console.error("Diagnosis error:", err);
-      setError(err?.message || "Failed to analyze crop. Please try again.");
+      setError(
+        "Could not analyze this photo. Make sure the photo clearly shows a crop leaf or plant, is well-lit and not blurry — then try again. (AI service may also be busy — please retry.)"
+      );
     } finally {
       setLoading(false);
     }
