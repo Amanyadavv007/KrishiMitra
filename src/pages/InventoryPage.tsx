@@ -398,18 +398,26 @@ export default function InventoryPage() {
           )}
         </div>
 
-        {/* Add Harvest Form */}
+        {/* Add Harvest Modal — centered popup so it is always visible on click */}
         {showAddForm && (
-          <div className="bg-white rounded-2xl border-2 border-emerald-200 shadow-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-bold text-slate-900">Add Harvest to Crop Stock</h3>
-              <button onClick={() => setShowAddForm(false)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 cursor-pointer">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Crop Name</label>
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto"
+            onClick={() => setShowAddForm(false)}
+          >
+            <div
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl my-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between p-5 border-b border-slate-100 sticky top-0 bg-white rounded-t-2xl">
+                <h3 className="text-sm font-bold text-slate-900">Add Harvest to Crop Stock</h3>
+                <button onClick={() => setShowAddForm(false)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 cursor-pointer">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-5 max-h-[70vh] overflow-y-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Crop Name</label>
                 <select
                   value={newItem.cropName}
                   onChange={(e) => setNewItem({ ...newItem, cropName: e.target.value })}
@@ -512,6 +520,8 @@ export default function InventoryPage() {
             >
               Add to Inventory (Permanent)
             </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
