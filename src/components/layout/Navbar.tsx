@@ -12,99 +12,97 @@ export default function Navbar() {
   const [aiMenuOpen, setAiMenuOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+    <header className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-xs">
+      <div className="flex items-center h-16 w-full">
 
-          {/* LEFT: Logo — AgriNexus, pinned to far-left */}
-          <Link to="/" className="flex items-center gap-2.5 shrink-0">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-green-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
-              <Sprout className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="font-extrabold text-lg tracking-tight text-slate-900 leading-none">AgriNexus</span>
-              <span className="block text-[9px] font-semibold text-slate-400 tracking-wider uppercase mt-0.5">Smart Agriculture</span>
-            </div>
+        {/* LEFT: Logo — AgriNexus, snapped to the far-left edge, no gap */}
+        <Link to="/" className="flex items-center gap-2.5 shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-sm">
+            <Sprout className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="font-extrabold text-lg tracking-tight text-slate-900 leading-none">AgriNexus</span>
+            <span className="block text-[9px] font-semibold text-slate-400 tracking-wider uppercase mt-0.5">Smart Agriculture</span>
+          </div>
+        </Link>
+
+        {/* CENTER: Nav links — even spacing, single line, full width middle */}
+        <nav className="hidden lg:flex-1 flex items-center justify-center gap-1 px-2 overflow-x-auto">
+          <Link to="/dashboard" className="px-3 py-2 rounded-lg text-sm font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors whitespace-nowrap">
+            {t("dashboard")}
+          </Link>
+          <Link to="/analyze" className="px-3 py-2 rounded-lg text-sm font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors whitespace-nowrap">
+            {t("cropCheckup")}
+          </Link>
+          <Link to="/weather" className="px-3 py-2 rounded-lg text-sm font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors whitespace-nowrap">
+            {t("weather")}
+          </Link>
+          <Link to="/products" className="px-3 py-2 rounded-lg text-sm font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors whitespace-nowrap">
+            {t("store")}
+          </Link>
+          <Link to="/dealers" className="px-3 py-2 rounded-lg text-sm font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors whitespace-nowrap">
+            {t("dealers")}
+          </Link>
+          {user && (
+            <Link to="/inventory" className="px-3 py-2 rounded-lg text-sm font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors whitespace-nowrap">
+              {t("fasalStock")}
+            </Link>
+          )}
+          <Link to="/mandi-prices" className="px-3 py-2 rounded-lg text-sm font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors whitespace-nowrap">
+            {t("mandiBhaav")}
+          </Link>
+          <Link to="/marketplace" className="px-3 py-2 rounded-lg text-sm font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors whitespace-nowrap">
+            {t("kisaanBazaar")}
+          </Link>
+          <Link to="/supply-chain" className="px-3 py-2 rounded-lg text-sm font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors whitespace-nowrap">
+            {t("maalKhed")}
           </Link>
 
-          {/* CENTER: Nav links — black text, single line, proper spacing */}
-          <nav className="hidden lg:flex items-center gap-1">
-            <Link to="/dashboard" className="px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors">
-              {t("dashboard")}
-            </Link>
-            <Link to="/analyze" className="px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors">
-              {t("cropCheckup")}
-            </Link>
-            <Link to="/weather" className="px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors">
-              {t("weather")}
-            </Link>
-            <Link to="/products" className="px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors">
-              {t("store")}
-            </Link>
-            <Link to="/dealers" className="px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors">
-              {t("dealers")}
-            </Link>
-            {user && (
-              <Link to="/inventory" className="px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors">
-                {t("fasalStock")}
-              </Link>
-            )}
-            <Link to="/mandi-prices" className="px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors">
-              {t("mandiBhaav")}
-            </Link>
-            <Link to="/marketplace" className="px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors">
-              {t("kisaanBazaar")}
-            </Link>
-            <Link to="/supply-chain" className="px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors">
-              {t("maalKhed")}
-            </Link>
-
-            {/* AI Seva Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setAiMenuOpen(!aiMenuOpen)}
-                className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors cursor-pointer"
-              >
-                <span>{t("aiSeva")}</span>
-                <ChevronDown className="w-3.5 h-3.5" />
-              </button>
-              {aiMenuOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setAiMenuOpen(false)} />
-                  <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-white shadow-xl border border-slate-200/80 p-2 z-50 space-y-1">
-                    <Link to="/digital-twin" onClick={() => setAiMenuOpen(false)} className="block p-2.5 rounded-xl hover:bg-emerald-50 text-xs transition-colors"><span className="font-bold text-slate-900 block">{t("khetKaNaksha")}</span><span className="text-[11px] text-slate-500">{t("khetKaNakshaDesc")}</span></Link>
-                    <Link to="/consensus-engine" onClick={() => setAiMenuOpen(false)} className="block p-2.5 rounded-xl hover:bg-violet-50 text-xs transition-colors"><span className="font-bold text-slate-900 block">{t("aiSalahkar")}</span><span className="text-[11px] text-slate-500">{t("aiSalahkarDesc")}</span></Link>
-                    <Link to="/what-if-simulation" onClick={() => setAiMenuOpen(false)} className="block p-2.5 rounded-xl hover:bg-amber-50 text-xs transition-colors"><span className="font-bold text-slate-900 block">{t("kyaHogaAgar")}</span><span className="text-[11px] text-slate-500">{t("kyaHogaAgarDesc")}</span></Link>
-                    <Link to="/agronomy-rag" onClick={() => setAiMenuOpen(false)} className="block p-2.5 rounded-xl hover:bg-teal-50 text-xs transition-colors"><span className="font-bold text-slate-900 block">{t("fasalSalah")}</span><span className="text-[11px] text-slate-500">{t("fasalSalahDesc")}</span></Link>
-                    <Link to="/field-mapping" onClick={() => setAiMenuOpen(false)} className="block p-2.5 rounded-xl hover:bg-blue-50 text-xs transition-colors"><span className="font-bold text-slate-900 block">{t("khetKiNaksha")}</span><span className="text-[11px] text-slate-500">{t("khetKiNakshaDesc")}</span></Link>
-                  </div>
-                </>
-              )}
-            </div>
-          </nav>
-
-          {/* RIGHT: Language selector, notifications, login/profile — pinned far-right */}
-          <div className="flex items-center gap-2.5">
-            <LanguageSelector />
-            <NotificationBell />
-            {user ? (
-              <div className="flex items-center gap-2">
-                <Link to="/profile" className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors text-xs font-semibold text-slate-700">
-                  <User className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline truncate max-w-[100px]">{user.name}</span>
-                </Link>
-                <button onClick={logout} className="p-2 rounded-xl hover:bg-slate-100 transition-colors text-slate-500 hover:text-red-600 cursor-pointer">
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <Link to="/login" className="px-4 py-2 rounded-xl text-xs font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors border border-slate-200">
-                {t("login")}
-              </Link>
+          {/* AI Seva Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setAiMenuOpen(!aiMenuOpen)}
+              className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors cursor-pointer whitespace-nowrap"
+            >
+              <span>{t("aiSeva")}</span>
+              <ChevronDown className="w-3.5 h-3.5" />
+            </button>
+            {aiMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setAiMenuOpen(false)} />
+                <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-white shadow-xl border border-slate-200/80 p-2 z-50 space-y-1">
+                  <Link to="/digital-twin" onClick={() => setAiMenuOpen(false)} className="block p-2.5 rounded-xl hover:bg-emerald-50 text-xs transition-colors"><span className="font-bold text-slate-900 block">{t("khetKaNaksha")}</span><span className="text-[11px] text-slate-500">{t("khetKaNakshaDesc")}</span></Link>
+                  <Link to="/consensus-engine" onClick={() => setAiMenuOpen(false)} className="block p-2.5 rounded-xl hover:bg-violet-50 text-xs transition-colors"><span className="font-bold text-slate-900 block">{t("aiSalahkar")}</span><span className="text-[11px] text-slate-500">{t("aiSalahkarDesc")}</span></Link>
+                  <Link to="/what-if-simulation" onClick={() => setAiMenuOpen(false)} className="block p-2.5 rounded-xl hover:bg-amber-50 text-xs transition-colors"><span className="font-bold text-slate-900 block">{t("kyaHogaAgar")}</span><span className="text-[11px] text-slate-500">{t("kyaHogaAgarDesc")}</span></Link>
+                  <Link to="/agronomy-rag" onClick={() => setAiMenuOpen(false)} className="block p-2.5 rounded-xl hover:bg-teal-50 text-xs transition-colors"><span className="font-bold text-slate-900 block">{t("fasalSalah")}</span><span className="text-[11px] text-slate-500">{t("fasalSalahDesc")}</span></Link>
+                  <Link to="/field-mapping" onClick={() => setAiMenuOpen(false)} className="block p-2.5 rounded-xl hover:bg-blue-50 text-xs transition-colors"><span className="font-bold text-slate-900 block">{t("khetKiNaksha")}</span><span className="text-[11px] text-slate-500">{t("khetKiNakshaDesc")}</span></Link>
+                </div>
+              </>
             )}
           </div>
+        </nav>
 
+        {/* RIGHT: Language selector, notifications, login/profile — snapped to far-right edge */}
+        <div className="flex items-center gap-2.5 shrink-0">
+          <LanguageSelector />
+          <NotificationBell />
+          {user ? (
+            <div className="flex items-center gap-2">
+              <Link to="/profile" className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors text-xs font-semibold text-slate-700">
+                <User className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline truncate max-w-[100px]">{user.name}</span>
+              </Link>
+              <button onClick={logout} className="p-2 rounded-xl hover:bg-slate-100 transition-colors text-slate-500 hover:text-red-600 cursor-pointer">
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <Link to="/login" className="px-4 py-2 rounded-xl text-sm font-bold text-white bg-slate-900 hover:bg-slate-800 transition-colors whitespace-nowrap">
+              Login
+            </Link>
+          )}
         </div>
+
       </div>
     </header>
   );
