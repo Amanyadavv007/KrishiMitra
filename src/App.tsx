@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "./contexts/AuthContext";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import { LocationProvider } from "./contexts/LocationContext";
 import { SocketProvider } from "./contexts/SocketContext";
@@ -8,6 +8,7 @@ import { SocketProvider } from "./contexts/SocketContext";
 import Navbar from "./components/layout/Navbar";
 import Footer from "./components/layout/Footer";
 import MobileNav from "./components/layout/MobileNav";
+import LanguageOnboardingModal from "./components/common/LanguageOnboardingModal";
 
 import LandingPage from "./pages/LandingPage";
 import FarmerDashboard from "./pages/FarmerDashboard";
@@ -45,10 +46,28 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <AppShell />
+      </AuthProvider>
+    </BrowserRouter>
+  );
+}
+
+function AppShell() {
+  const { user } = useAuth();
+  // Popup shows on every visit while logged out; once logged in, never again.
+  const [langSelected, setLangSelected] = useState(false);
+  const showLangModal = !user && !langSelected;
+
+  return (
+    <>
         <LanguageProvider>
           <LocationProvider>
             <SocketProvider>
-              <div className="flex flex-col min-h-screen bg-slate-50 text-slate-900 pb-16 lg:pb-0 selection:bg-emerald-500 selection:text-white">
+              <div
+                className={`flex flex-col min-h-screen bg-slate-50 text-slate-900 pb-16 lg:pb-0 selection:bg-emerald-500 selection:text-white transition-[filter] duration-300 ${
+                  showLangModal ? "blur-onboarding" : ""
+                }`}
+              >
                 <Navbar />
                 <main className="flex-1">
                   <Routes>
@@ -85,14 +104,16 @@ export default function App() {
                     <Route path="/marketplace" element={<MarketplacePage />} />
                     <Route path="/supply-chain" element={<SupplyChainPage />} />
                   </Routes>
-                </main>
-                <Footer />
+                </main>                <Footer />
                 <MobileNav />
               </div>
+              <LanguageOnboardingModal
+                open={showLangModal}
+                onSelect={() => setLangSelected(true)}
+              />
             </SocketProvider>
           </LocationProvider>
         </LanguageProvider>
-      </AuthProvider>
-    </BrowserRouter>
+    </>
   );
 }
