@@ -2,14 +2,17 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Camera, Image, Sparkles, AlertCircle } from "lucide-react";
 import { useLanguage } from "../contexts/LanguageContext";
+import { useAuth } from "../contexts/AuthContext";
 import CameraCaptureModal from "../components/camera/CameraCaptureModal";
 import AnalysisLoadingAnimation from "../components/analysis/AnalysisLoadingAnimation";
-import api from "../services/api";
+import { diagnoseCropImage, CropDiagnosis } from "../lib/gemini";
+import { saveAnalysis } from "../lib/analysisStore";
 
 const CROPS = ["Paddy", "Tomato", "Mustard", "Potato", "Maize", "Brinjal", "Chilli", "Other"];
 
 export default function AnalyzeCropPage() {
   const { t, language } = useLanguage();
+  const { user } = useAuth();
   const [selectedCrop, setSelectedCrop] = useState("Paddy");
   const [imageData, setImageData] = useState<string | null>(null);
   const [cameraOpen, setCameraOpen] = useState(false);
@@ -33,18 +36,32 @@ export default function AnalyzeCropPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await api.post("/analysis/diagnose", {
-        cropName: selectedCrop,
-        imageData,
-        language,
+      // 1. Diagnose with the free Gemini LLM (grounded in agri data,
+      //    with offline knowledge-base fallback if network fails)
+      const diagnosis: CropDiagnosis = await diagnoseCropImage(selectedCrop, imageData, language);
+
+      // 2. Save permanently to the database (Supabase) with localStorage fallback
+      const record = await saveAnalysis({
+        farmer_id: user?.id || null,
+        crop_name: selectedCrop,
+        disease: diagnosis.disease,
+        severity: diagnosis.severity,
+        confidence: diagnosis.confidence,
+        image_url: imageData,
+        symptoms: diagnosis.symptoms,
+        organic_treatments: diagnosis.organicTreatments,
+        chemical_treatments: diagnosis.chemicalTreatments,
+        cause: diagnosis.cause,
+        irrigation_advice: diagnosis.irrigationAdvice,
+        soil_advice: diagnosis.soilAdvice,
+        recommended_products: diagnosis.recommendedProducts,
+        summary: diagnosis.summary,
       });
-      if (res.data.success) {
-        navigate(`/analysis/${res.data.analysis.id}`);
-      } else {
-        setError(res.data.message || "Diagnosis failed.");
-      }
+
+      navigate(`/analysis/${record.id}`);
     } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to analyze crop.");
+      console.error("Diagnosis error:", err);
+      setError(err?.message || "Failed to analyze crop. Please try again.");
     } finally {
       setLoading(false);
     }

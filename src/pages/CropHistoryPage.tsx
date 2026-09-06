@@ -1,27 +1,26 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { History, Search, Camera, ArrowRight } from "lucide-react";
-import api from "../services/api";
+import { useAuth } from "../contexts/AuthContext";
+import { fetchAnalysisHistory } from "../lib/analysisStore";
 
 export default function CropHistoryPage() {
+  const { user } = useAuth();
   const [analyses, setAnalyses] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get("/analysis/history")
-      .then((res) => {
-        if (res.data.success) {
-          setAnalyses(res.data.analyses || []);
-        }
-      })
-      .finally(() => setLoading(false));
-  }, []);
+    fetchAnalysisHistory(user?.id).then((rows) => {
+      setAnalyses(rows || []);
+      setLoading(false);
+    });
+  }, [user?.id]);
 
   const filtered = analyses.filter((a) => {
     const q = search.toLowerCase();
     return (
-      a.cropName?.toLowerCase().includes(q) ||
+      a.crop_name?.toLowerCase().includes(q) ||
       (a.disease && a.disease.toLowerCase().includes(q)) ||
       (a.severity && a.severity.toLowerCase().includes(q))
     );
@@ -77,14 +76,14 @@ export default function CropHistoryPage() {
               <Link key={a.id} to={`/analysis/${a.id}`} className="group bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
                 <div>
                   <div className="relative w-full h-40 rounded-xl overflow-hidden bg-slate-900 mb-3">
-                    <img src={a.imageUrl} alt="Crop" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                    <img src={a.image_url} alt="Crop" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                     <span className={`absolute top-2 left-2 px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${a.severity === "High" || a.severity === "Critical" ? "bg-rose-500 text-white" : "bg-amber-500 text-slate-900"}`}>
                       {a.severity || "Medium"}
                     </span>
                   </div>
 
                   <h3 className="text-sm font-bold text-slate-900 group-hover:text-emerald-700">
-                    {a.cropName}
+                    {a.crop_name}
                   </h3>
                   <p className="text-xs text-rose-600 font-medium line-clamp-1">
                     {a.disease || "Healthy"}
@@ -92,7 +91,7 @@ export default function CropHistoryPage() {
                 </div>
 
                 <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100 text-[10px] text-slate-400">
-                  <span>{new Date(a.createdAt).toLocaleDateString()}</span>
+                  <span>{new Date(a.created_at).toLocaleDateString()}</span>
                   <div className="flex items-center gap-1 text-emerald-600 font-semibold">
                     <span>Details</span>
                     <ArrowRight className="w-3 h-3" />

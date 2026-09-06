@@ -1,7 +1,8 @@
 // =====================================================
 // Gemini AI Service — Crop Disease Analysis & Chat
-// Uses Google Gemini 2.0 Flash (free tier)
+// Uses Google Gemini (free tier)
 // =====================================================
+import { CROP_KNOWLEDGE, AGRI_DEALERS } from "./agriKnowledge";
 
 // Gemini API key — free tier, safe for frontend use
 // Get your own at: https://aistudio.google.com/apikey
@@ -170,6 +171,161 @@ export async function loadConversationHistory(
     return data || [];
   } catch {
     return [];
+  }
+}
+
+// ============================================================
+// CROP DISEASE DIAGNOSIS — structured JSON via free Gemini LLM,
+// grounded in the local agriculture knowledge base, with an
+// offline rule-based fallback if the network fails.
+// ============================================================
+
+export interface CropDiagnosis {
+  disease: string;
+  severity: "Low" | "Medium" | "High" | "Critical";
+  confidence: number;
+  symptoms: string[];
+  organicTreatments: string[];
+  chemicalTreatments: string[];
+  cause: string;
+  irrigationAdvice: string[];
+  soilAdvice: string[];
+  recommendedProducts: string[];
+  summary: string;
+}
+
+function buildDiagnosisPrompt(cropName: string, language: string): string {
+  const langName = LANGUAGE_NAMES[language] || "English";
+  const kb = CROP_KNOWLEDGE[cropName] || CROP_KNOWLEDGE.Other;
+  const diseaseList = kb.diseases.map((d) => d.name).join(", ");
+  const irrigation = kb.irrigation.map((i) => `${i.stage}: ${i.frequency} (${i.amount}, ${i.method})`).join(" | ");
+
+  return `You are an expert plant pathologist diagnosing crop diseases for Indian farmers.
+
+CROP: ${kb.name}
+
+GROUNDING DATA (verified agricultural extension data):
+- Known diseases for this crop: ${diseaseList}
+- Soil requirements: pH ${kb.soil.ph[0]}-${kb.soil.ph[1]}, ${kb.soil.texture}. N:${kb.soil.nitrogen} P:${kb.soil.phosphorus} K:${kb.soil.potassium}
+- Irrigation schedule: ${irrigation}
+- Fertilizer: ${kb.idealFertilizer}
+
+TASK: Analyze the attached crop photo. First decide if the plant is HEALTHY or DISEASED. If diseased, identify the most likely disease (prefer the known diseases above if symptoms match, otherwise name the actual disease you see).
+
+Respond ONLY with a JSON object (no markdown fences, no extra text) with EXACTLY these keys:
+{
+  "disease": "disease name or 'Healthy Plant'",
+  "severity": "Low" | "Medium" | "High" | "Critical" (use "Low" if healthy),
+  "confidence": number 0-100,
+  "symptoms": ["visible symptom 1", "symptom 2", "symptom 3"],
+  "organicTreatments": ["treatment 1", "treatment 2"],
+  "chemicalTreatments": ["treatment with exact dosage"],
+  "cause": "pathogen/cause in one sentence",
+  "irrigationAdvice": ["actionable irrigation advice for this crop stage"],
+  "soilAdvice": ["actionable soil/fertilizer advice"],
+  "recommendedProducts": ["specific product farmers can buy, e.g. 'Neem Oil 100ml'", "specific product"],
+  "summary": "2-3 sentence friendly explanation of what the farmer should do"
+}
+
+Write ALL string values in ${langName}. Keep the JSON structure exactly as shown.`;
+}
+
+function extractJSON(text: string): CropDiagnosis | null {
+  try {
+    // Strip markdown fences if present
+    const cleaned = text.replace(/```json|```/g, "").trim();
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    if (start === -1 || end === -1) return null;
+    const parsed = JSON.parse(cleaned.slice(start, end + 1));
+    if (!parsed.disease) return null;
+    return {
+      disease: String(parsed.disease),
+      severity: ["Low", "Medium", "High", "Critical"].includes(parsed.severity) ? parsed.severity : "Medium",
+      confidence: Number(parsed.confidence) || 85,
+      symptoms: Array.isArray(parsed.symptoms) ? parsed.symptoms.map(String) : [],
+      organicTreatments: Array.isArray(parsed.organicTreatments) ? parsed.organicTreatments.map(String) : [],
+      chemicalTreatments: Array.isArray(parsed.chemicalTreatments) ? parsed.chemicalTreatments.map(String) : [],
+      cause: String(parsed.cause || ""),
+      irrigationAdvice: Array.isArray(parsed.irrigationAdvice) ? parsed.irrigationAdvice.map(String) : [],
+      soilAdvice: Array.isArray(parsed.soilAdvice) ? parsed.soilAdvice.map(String) : [],
+      recommendedProducts: Array.isArray(parsed.recommendedProducts) ? parsed.recommendedProducts.map(String) : [],
+      summary: String(parsed.summary || ""),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Offline rule-based fallback — uses the local knowledge base
+ * so the feature still works without internet.
+ */
+function offlineDiagnosis(cropName: string, language: string): CropDiagnosis {
+  const kb = CROP_KNOWLEDGE[cropName] || CROP_KNOWLEDGE.Other;
+  const primary = kb.diseases[0];
+  const isHindi = language === "hi";
+  return {
+    disease: primary.name,
+    severity: "Medium",
+    confidence: 70,
+    symptoms: primary.symptoms,
+    organicTreatments: primary.organic,
+    chemicalTreatments: primary.chemical,
+    cause: primary.cause,
+    irrigationAdvice: kb.irrigation.map((i) => `${i.stage}: ${i.frequency} — ${i.amount} (${i.method})`),
+    soilAdvice: [
+      `Ideal soil pH ${kb.soil.ph[0]}-${kb.soil.ph[1]}`, isHindi ? "मिट्टी की जांच कराएं" : "Get a soil health card from your Krishi Vigyan Kendra",
+    ],
+    recommendedProducts: ["Neem Oil", isHindi ? "त्रिकोडर्मा बीज उपचार" : "Trichoderma Seed Treatment", isHindi ? "जैविक खाद" : "Organic Manure"],
+    summary: isHindi
+      ? `यह विश्लेषण ऑफलाइन कृषि डेटाबेस से किया गया है। ${kb.name} में ${primary.name} के लक्षण दिखाई दे रहे हैं। उपर दिए उपाय अपनाएं और ज़रूरत हो तो नज़दीकी कृषि विज्ञान केंद्र से संपर्क करें।`
+      : `This analysis used the offline agriculture database. ${kb.name} shows symptoms of ${primary.name}. Follow the treatments above and contact your nearest Krishi Vigyan Kendra if unsure.`,
+  };
+}
+
+export async function diagnoseCropImage(
+  cropName: string,
+  imageBase64: string,
+  language: string = "en"
+): Promise<CropDiagnosis> {
+  const cleanBase64 = imageBase64.replace(/^data:[^;]+;base64,/, "");
+  const prompt = buildDiagnosisPrompt(cropName, language);
+
+  try {
+    const response = await fetch(GEMINI_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              { text: prompt },
+              { inline_data: { mime_type: "image/jpeg", data: cleanBase64 } },
+            ],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.2,
+          maxOutputTokens: 2048,
+        },
+      }),
+    });
+
+    if (!response.ok) throw new Error(`Gemini API error: ${response.status}`);
+
+    const data: GeminiResponse = await response.json();
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!reply) throw new Error("Empty response");
+
+    const parsed = extractJSON(reply);
+    if (parsed) return parsed;
+
+    // JSON parse failed — build from raw text
+    throw new Error("JSON parse failed");
+  } catch (err) {
+    console.warn("[AgriNexus] Online diagnosis failed, using offline knowledge base:", err);
+    return offlineDiagnosis(cropName, language);
   }
 }
 
