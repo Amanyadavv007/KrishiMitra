@@ -40,7 +40,14 @@ export default function AnalyzeCropPage() {
       //    with offline knowledge-base fallback if network fails)
       const diagnosis: CropDiagnosis = await diagnoseCropImage(selectedCrop, imageData, language);
 
-      // 2. Save permanently to the database (Supabase) with localStorage fallback
+      // 2. Reject non-agricultural images (person, pet, objects, etc.)
+      if (!diagnosis.isAgriImage) {
+        setError("This does not look like a crop. Please take a photo of a plant leaf, crop, soil, seeds, or anything related to farming.");
+        setImageData(null);
+        return;
+      }
+
+      // 3. Save permanently to the database (Supabase) with localStorage fallback
       const record = await saveAnalysis({
         farmer_id: user?.id || null,
         crop_name: selectedCrop,

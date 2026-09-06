@@ -181,6 +181,7 @@ export async function loadConversationHistory(
 // ============================================================
 
 export interface CropDiagnosis {
+  isAgriImage: boolean;
   disease: string;
   severity: "Low" | "Medium" | "High" | "Critical";
   confidence: number;
@@ -210,10 +211,11 @@ GROUNDING DATA (verified agricultural extension data):
 - Irrigation schedule: ${irrigation}
 - Fertilizer: ${kb.idealFertilizer}
 
-TASK: Analyze the attached crop photo. First decide if the plant is HEALTHY or DISEASED. If diseased, identify the most likely disease (prefer the known diseases above if symptoms match, otherwise name the actual disease you see).
+TASK: FIRST check whether the image shows anything related to agriculture — a crop, plant, leaf, soil, seeds, pests, pesticide/fertilizer products, farm fields or equipment. If it clearly does NOT (e.g. a person, selfie, pet, vehicle, food plate, random object, screenshot), set "isAgriImage" to false, leave the other analysis fields empty arrays / minimal, and put a one-line reason in "summary". Otherwise set "isAgriImage" to true and continue with the full diagnosis. If the plant part is healthy, set disease to 'Healthy Plant'.
 
 Respond ONLY with a JSON object (no markdown fences, no extra text) with EXACTLY these keys:
 {
+  "isAgriImage": true or false,
   "disease": "disease name or 'Healthy Plant'",
   "severity": "Low" | "Medium" | "High" | "Critical" (use "Low" if healthy),
   "confidence": number 0-100,
@@ -239,9 +241,15 @@ function extractJSON(text: string): CropDiagnosis | null {
     if (start === -1 || end === -1) return null;
     const parsed = JSON.parse(cleaned.slice(start, end + 1));
     if (!parsed.disease) return null;
+    // Normalize severity — the model sometimes returns "Moderate"
+    const rawSeverity = String(parsed.severity || "Medium");
+    const normalizedSeverity: CropDiagnosis["severity"] =
+      rawSeverity === "Moderate" ? "Medium" :
+      ["Low", "Medium", "High", "Critical"].includes(rawSeverity) ? (rawSeverity as CropDiagnosis["severity"]) : "Medium";
     return {
+      isAgriImage: parsed.isAgriImage !== false,
       disease: String(parsed.disease),
-      severity: ["Low", "Medium", "High", "Critical"].includes(parsed.severity) ? parsed.severity : "Medium",
+      severity: normalizedSeverity,
       confidence: Number(parsed.confidence) || 85,
       symptoms: Array.isArray(parsed.symptoms) ? parsed.symptoms.map(String) : [],
       organicTreatments: Array.isArray(parsed.organicTreatments) ? parsed.organicTreatments.map(String) : [],
@@ -266,6 +274,7 @@ function offlineDiagnosis(cropName: string, language: string): CropDiagnosis {
   const primary = kb.diseases[0];
   const isHindi = language === "hi";
   return {
+    isAgriImage: true,
     disease: primary.name,
     severity: "Medium",
     confidence: 70,
