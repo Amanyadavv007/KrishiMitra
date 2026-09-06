@@ -5,6 +5,7 @@ import { useLanguage } from "../contexts/LanguageContext";
 import WeatherWidget from "../components/weather/WeatherWidget";
 import CameraCaptureModal from "../components/camera/CameraCaptureModal";
 import MandiPricesBar from "../components/MandiPricesBar";
+import riceFieldBg from "../assets/rice-field.jpg"; // live wallpaper photo
 
 export default function LandingPage() {
   const { t } = useLanguage();
@@ -91,8 +92,57 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <div className="relative overflow-hidden bg-gradient-to-b from-emerald-900 via-emerald-800 to-green-900 text-white pt-0 pb-16 px-4">
-        <div className="max-w-7xl mx-auto">
+      <div className="relative overflow-hidden text-white pt-0 pb-16 px-4">
+
+        {/* SVG filter that makes the photo's crops sway (turbulence -> displacement) */}
+        <svg width="0" height="0" style={{ position: "absolute" }}>
+          <filter id="cropWave" x="-20%" y="-20%" width="140%" height="140%">
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency="0.006 0.012"
+              numOctaves={2}
+              seed={7}
+              result="noise"
+            >
+              <animate
+                attributeName="baseFrequency"
+                dur="14s"
+                values="0.006 0.012;0.009 0.016;0.006 0.012"
+                repeatCount="indefinite"
+              />
+            </feTurbulence>
+            <feDisplacementMap
+              in="SourceGraphic"
+              in2="noise"
+              scale={18}
+              xChannelSelector="R"
+              yChannelSelector="G"
+            />
+          </filter>
+        </svg>
+
+        {/* Live background photo (Ken-Burns zoom + wavy filter) — brightened, greener */}
+        <div
+          className="absolute inset-0 motion-safe:animate-[breathe_22s_ease-in-out_infinite_alternate]"
+          style={{
+            backgroundImage: `url(${riceFieldBg})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center 55%",
+            filter: "url(#cropWave) saturate(1.28) brightness(1.12) hue-rotate(12deg)",
+            willChange: "transform",
+          }}
+        />
+
+        {/* Lighter scrim — image shows through clearly, text/buttons stay readable */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(6,46,33,0.68) 0%, rgba(6,78,59,0.52) 45%, rgba(5,46,22,0.70) 100%)",
+          }}
+        />
+
+        <div className="relative z-10 max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
             <div className="lg:col-span-7 space-y-4">
             <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight">
@@ -125,7 +175,7 @@ export default function LandingPage() {
             </div>
 
             <div className="lg:col-span-5">
-              <WeatherWidget showForecast={true} />
+              <WeatherWidget showForecast={true} variant="glass" />
             </div>
           </div>
         </div>
