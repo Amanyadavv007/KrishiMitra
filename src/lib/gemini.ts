@@ -3,11 +3,8 @@
 // Uses Google Gemini (free tier)
 // =====================================================
 import { CROP_KNOWLEDGE, AGRI_DEALERS } from "./agriKnowledge";
-
-// Gemini API key — free tier, safe for frontend use
-// Get your own at: https://aistudio.google.com/apikey
-const _k = [65,81,46,65,98,56,82,78,54,73,116,90,118,113,57,55,110,116,112,115,71,81,98,54,55,85,57,85,122,49,73,121,51,75,117,90,82,116,82,111,72,85,80,65,72,122,45,78,48,118,79,57,65];
-const GEMINI_API_KEY = _k.map((c) => String.fromCharCode(c)).join("");
+import { retrieveKb, formatKbContext } from "./kbRetrieval";
+import { GEMINI_API_KEY } from "./geminiKey";
 const GEMINI_MODEL = "gemini-flash-lite-latest";
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
@@ -65,9 +62,20 @@ export async function askGemini(
 ): Promise<string> {
   const langName = LANGUAGE_NAMES[language] || "English";
 
+  // RAG: ground the answer in the KrishiMitra datasets (best-effort)
+  let kbContext = "";
+  try {
+    kbContext = formatKbContext(await retrieveKb(message));
+  } catch {
+    kbContext = "";
+  }
+  const grounding = kbContext
+    ? `\n\nGROUNDING CONTEXT (verified facts from the KrishiMitra datasets — use where relevant, ignore if unrelated to the question):\n${kbContext}\n`
+    : "";
+
   const parts: GeminiPart[] = [
     {
-      text: `${SYSTEM_PROMPT}\n\nThe farmer is communicating in: ${langName}. Respond ONLY in ${langName}.\n\nFarmer's message: ${message}`,
+      text: `${SYSTEM_PROMPT}\n\nThe farmer is communicating in: ${langName}. Respond ONLY in ${langName}.${grounding}\n\nFarmer's message: ${message}`,
     },
   ];
 
