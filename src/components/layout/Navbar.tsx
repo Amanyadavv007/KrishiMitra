@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Sprout, User, LogOut, ChevronDown } from "lucide-react";
+import { Sprout, User, LogOut, ChevronDown, Settings } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useLanguage } from "../../contexts/LanguageContext";
 import LanguageSelector from "../common/LanguageSelector";
@@ -11,6 +11,8 @@ export default function Navbar() {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [aiMenuOpen, setAiMenuOpen] = useState(false);
+  const [marketOpen, setMarketOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
@@ -36,31 +38,49 @@ export default function Navbar() {
             <Link to="/weather" className="px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors">
               {t("weather")}
             </Link>
-            <Link to="/products" className="px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors">
-              {t("store")}
-            </Link>
-            <Link to="/dealers" className="px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors">
-              {t("dealers")}
-            </Link>
             {user && (
               <Link to="/inventory" className="px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors">
                 {t("fasalStock")}
               </Link>
             )}
-            <Link to="/mandi-prices" className="px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors">
-              {t("mandiBhaav")}
-            </Link>
-            <Link to="/marketplace" className="px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors">
-              {t("kisaanBazaar")}
-            </Link>
-            <Link to="/supply-chain" className="px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors">
-              {t("maalKhed")}
-            </Link>
+            {/* Market Dropdown — all buying & selling in one place */}
+            <div className="relative">
+              <button
+                onClick={() => { setMarketOpen(!marketOpen); setAiMenuOpen(false); setSettingsOpen(false); }}
+                className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors cursor-pointer"
+              >
+                <span>{t("marketMenu")}</span>
+                <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+
+              {marketOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setMarketOpen(false)} />
+                  <div className="absolute right-0 mt-2 w-60 rounded-2xl bg-white shadow-xl border border-slate-200/80 p-2 z-50 space-y-1">
+                    <Link to="/mandi-prices" onClick={() => setMarketOpen(false)} className="block px-3 py-2.5 rounded-xl hover:bg-blue-50 text-xs font-semibold text-slate-800 transition-colors">
+                      {t("mandiBhaav")}
+                    </Link>
+                    <Link to="/marketplace" onClick={() => setMarketOpen(false)} className="block px-3 py-2.5 rounded-xl hover:bg-emerald-50 text-xs font-semibold text-slate-800 transition-colors">
+                      {t("kisaanBazaar")}
+                    </Link>
+                    <Link to="/supply-chain" onClick={() => setMarketOpen(false)} className="block px-3 py-2.5 rounded-xl hover:bg-violet-50 text-xs font-semibold text-slate-800 transition-colors">
+                      {t("maalKhed")}
+                    </Link>
+                    <Link to="/products" onClick={() => setMarketOpen(false)} className="block px-3 py-2.5 rounded-xl hover:bg-amber-50 text-xs font-semibold text-slate-800 transition-colors">
+                      {t("store")}
+                    </Link>
+                    <Link to="/dealers" onClick={() => setMarketOpen(false)} className="block px-3 py-2.5 rounded-xl hover:bg-teal-50 text-xs font-semibold text-slate-800 transition-colors">
+                      {t("dealers")}
+                    </Link>
+                  </div>
+                </>
+              )}
+            </div>
 
             {/* AI Seva Dropdown */}
             <div className="relative">
               <button
-                onClick={() => setAiMenuOpen(!aiMenuOpen)}
+                onClick={() => { setAiMenuOpen(!aiMenuOpen); setMarketOpen(false); setSettingsOpen(false); }}
                 className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors cursor-pointer"
               >
                 <span>{t("aiSeva")}</span>
@@ -118,23 +138,54 @@ export default function Navbar() {
           </nav>
 
           <div className="flex items-center gap-2.5">
-            <LanguageSelector />
-            <NotificationBell />
-            {user ? (
-              <div className="flex items-center gap-2">
-                <Link to="/profile" className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors text-xs font-semibold text-slate-700">
-                  <User className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline truncate max-w-[100px]">{user.name}</span>
-                </Link>
-                <button onClick={logout} className="p-2 rounded-xl hover:bg-slate-100 transition-colors text-slate-500 hover:text-red-600 cursor-pointer">
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <Link to="/login" className="px-4 py-2 rounded-xl text-xs font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors border border-slate-200">
-                {t("login")}
-              </Link>
-            )}
+            {/* Settings Dropdown — language, alerts & account in one place */}
+            <div className="relative">
+              <button
+                onClick={() => { setSettingsOpen(!settingsOpen); setAiMenuOpen(false); setMarketOpen(false); }}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-800 hover:text-emerald-700 hover:bg-emerald-50/60 transition-colors border border-slate-200 cursor-pointer"
+              >
+                <Settings className="w-4 h-4" />
+                <span className="hidden sm:inline">{t("settings")}</span>
+                <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+
+              {settingsOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setSettingsOpen(false)} />
+                  <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-white shadow-xl border border-slate-200/80 p-2 z-50 space-y-1">
+                    <div className="flex items-center justify-between px-2 py-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t("language")}</span>
+                      <LanguageSelector />
+                    </div>
+                    <div className="flex items-center justify-between px-2 py-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t("alerts")}</span>
+                      <NotificationBell />
+                    </div>
+                    <div className="border-t border-slate-100 my-1" />
+                    {user ? (
+                      <>
+                        <Link to="/profile" onClick={() => setSettingsOpen(false)} className="flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-emerald-50 text-xs font-semibold text-slate-800 transition-colors">
+                          <User className="w-4 h-4 text-slate-500" />
+                          <span className="truncate">{user.name}</span>
+                        </Link>
+                        <button
+                          onClick={() => { logout(); setSettingsOpen(false); }}
+                          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-rose-50 text-xs font-semibold text-slate-800 hover:text-red-600 transition-colors cursor-pointer"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          <span>{t("logout")}</span>
+                        </button>
+                      </>
+                    ) : (
+                      <Link to="/login" onClick={() => setSettingsOpen(false)} className="flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-emerald-50 text-xs font-semibold text-slate-800 transition-colors">
+                        <User className="w-4 h-4 text-slate-500" />
+                        <span>{t("login")}</span>
+                      </Link>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>

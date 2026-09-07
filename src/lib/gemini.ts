@@ -429,3 +429,212 @@ function getFallbackMessage(language: string, type: string): string {
 
   return (messages[language] as Record<string, string>)?.[type] || messages.en[type] || "Something went wrong. Please try again.";
 }
+
+// ============================================================
+// SOIL HEALTH — visual/physical assessment from a photo.
+// SCOPE: a photo can NEVER reveal chemical data (pH, N-P-K).
+// We only describe what is visible and the UI always advises a
+// proper lab test. No exact nutrient/pH numbers are ever produced.
+// ============================================================
+
+const SOIL_LANGUAGE_NAMES: Record<string, string> = {
+  en: "English",
+  hi: "Hindi (हिन्दी)",
+  bn: "Bengali (বাংলা)",
+  te: "Telugu (తెలుగు)",
+  ta: "Tamil (தமிழ்)",
+  kn: "Kannada (ಕನ್నಡ)",
+  mr: "Marathi (मराठी)",
+  or: "Odia (ଓଡ଼ିଆ)",
+  od: "Odia (ଓଡ଼ିଆ)",
+};
+
+export interface SoilAssessment {
+  isSoilImage: boolean;
+  notSoilReason: string;
+  soilType: string;
+  confidence: "Low" | "Moderate" | "High";
+  confidenceBadge: string;
+  colorIndication: string;
+  organicMatterLevel: "Good" | "Moderate" | "Poor" | "Unclear";
+  organicMatterBadge: string;
+  organicMatterText: string;
+  drainageLevel: "Good" | "Moderate" | "Poor" | "Unclear";
+  drainageText: string;
+  salinitySigns: "None" | "Possible" | "Unclear";
+  salinityBadge: string;
+  salinityText: string;
+  moistureLevel: "Wet" | "Moist" | "Dry" | "VeryDry" | "Unclear";
+  moistureText: string;
+  vegetationNote: string;
+  surfaceConditions: string[];
+  recommendations: string[];
+  summary: string;
+}
+
+function buildSoilPrompt(language: string): string {
+  const langName = SOIL_LANGUAGE_NAMES[language] || "English";
+  return `You are an expert agronomist assessing SOIL from a photo for Indian farmers.
+
+ABSOLUTE RULES:
+- A photo can NEVER reveal chemical data. NEVER output pH values, N-P-K numbers, or any exact nutrient figures. Describe ONLY what is visibly apparent: texture, color, surface condition, moisture look, visible life.
+- NEVER claim lab-level precision. Everything is a visual estimate.
+- Write ALL text values in ${langName} using simple words — no technical jargon, the farmer may have limited literacy. Never mix languages.
+
+TASK: First decide whether the photo plausibly shows bare soil / farm ground / earth.
+- If it is CLEARLY not soil (a face or person, an animal, a room, food, a screenshot, or a plant close-up with no visible soil), set isSoilImage=false, put a one-line reason in notSoilReason (in ${langName}), and fill the remaining fields with empty defaults ("" / [] / "Unclear").
+- If soil IS visible (even with plants or debris on top), set isSoilImage=true and assess ONLY visual/physical traits:
+1. soilType: texture-based appearance — sandy / clayey / loamy / silty (write in ${langName}, e.g. "रेतीली मिट्टी (Sandy)"). confidence: "Low"|"Moderate"|"High" and confidenceBadge: a short native phrase meaning visual-estimate confidence like "मध्यम अनुमान".
+2. colorIndication: what the dominant soil color simply suggests — dark brown/black = more organic matter; reddish = iron-rich, less organic matter, may be acidic; pale/grey = poor drainage or low organic matter; yellowish = poor drainage or lack of iron.
+3. organicMatterLevel: "Good"|"Moderate"|"Poor"|"Unclear" + organicMatterBadge (short native label) + organicMatterText (native explanation).
+4. drainageLevel: "Good"|"Moderate"|"Poor"|"Unclear" + drainageText (native, judged from cracks, texture and color).
+5. salinitySigns: "None"|"Possible"|"Unclear" — "Possible" ONLY if a white/salty crust is clearly visible + salinityBadge (short native label) + salinityText (native).
+6. moistureLevel: "Wet"|"Moist"|"Dry"|"VeryDry"|"Unclear" + moistureText (native, clearly worded as a visual estimate, e.g. "looking dry and dusty").
+7. surfaceConditions: up to 4 visible signs — cracking, hard crust, white salt deposits, erosion marks, organic debris/mulch. Each a short native phrase. Empty array if none.
+8. vegetationNote: ONLY if weeds/plants are clearly visible AND their type clearly indicates something about the soil (e.g. some weeds point to acidic or compacted soil). Otherwise "".
+9. recommendations: 2-4 short, practical, low-cost actions the farmer can actually do (native).
+10. summary: 1-2 friendly sentences in ${langName}.
+
+Respond ONLY with a JSON object (no markdown fences, no extra text) with EXACTLY these keys:
+{
+  "isSoilImage": true,
+  "notSoilReason": "",
+  "soilType": "",
+  "confidence": "Moderate",
+  "confidenceBadge": "",
+  "colorIndication": "",
+  "organicMatterLevel": "Unclear",
+  "organicMatterBadge": "",
+  "organicMatterText": "",
+  "drainageLevel": "Unclear",
+  "drainageText": "",
+  "salinitySigns": "Unclear",
+  "salinityBadge": "",
+  "salinityText": "",
+  "moistureLevel": "Unclear",
+  "moistureText": "",
+  "vegetationNote": "",
+  "surfaceConditions": [],
+  "recommendations": [],
+  "summary": ""
+}
+
+Write ALL string values in ${langName}. Keep the JSON structure exactly as shown.`;
+}
+
+function extractSoilJSON(text: string): SoilAssessment | null {
+  try {
+    const cleaned = text.replace(/```json|```/g, "").trim();
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    if (start === -1 || end === -1) return null;
+    const parsed = JSON.parse(cleaned.slice(start, end + 1));
+    if (parsed.isSoilImage === false) {
+      return {
+        isSoilImage: false,
+        notSoilReason: String(parsed.notSoilReason || ""),
+        soilType: "",
+        confidence: "Low",
+        confidenceBadge: "",
+        colorIndication: "",
+        organicMatterLevel: "Unclear",
+        organicMatterBadge: "",
+        organicMatterText: "",
+        drainageLevel: "Unclear",
+        drainageText: "",
+        salinitySigns: "Unclear",
+        salinityBadge: "",
+        salinityText: "",
+        moistureLevel: "Unclear",
+        moistureText: "",
+        vegetationNote: "",
+        surfaceConditions: [],
+        recommendations: [],
+        summary: String(parsed.summary || ""),
+      };
+    }
+    if (!parsed.soilType) return null;
+    const pick = <T extends string>(v: unknown, allowed: readonly T[], fallback: T): T =>
+      allowed.includes(v as T) ? (v as T) : fallback;
+    return {
+      isSoilImage: true,
+      notSoilReason: "",
+      soilType: String(parsed.soilType),
+      confidence: pick(parsed.confidence, ["Low", "Moderate", "High"] as const, "Moderate"),
+      confidenceBadge: String(parsed.confidenceBadge || ""),
+      colorIndication: String(parsed.colorIndication || ""),
+      organicMatterLevel: pick(parsed.organicMatterLevel, ["Good", "Moderate", "Poor", "Unclear"] as const, "Unclear"),
+      organicMatterBadge: String(parsed.organicMatterBadge || ""),
+      organicMatterText: String(parsed.organicMatterText || ""),
+      drainageLevel: pick(parsed.drainageLevel, ["Good", "Moderate", "Poor", "Unclear"] as const, "Unclear"),
+      drainageText: String(parsed.drainageText || ""),
+      salinitySigns: pick(parsed.salinitySigns, ["None", "Possible", "Unclear"] as const, "Unclear"),
+      salinityBadge: String(parsed.salinityBadge || ""),
+      salinityText: String(parsed.salinityText || ""),
+      moistureLevel: pick(parsed.moistureLevel, ["Wet", "Moist", "Dry", "VeryDry", "Unclear"] as const, "Unclear"),
+      moistureText: String(parsed.moistureText || ""),
+      vegetationNote: String(parsed.vegetationNote || ""),
+      surfaceConditions: Array.isArray(parsed.surfaceConditions) ? parsed.surfaceConditions.map(String).slice(0, 4) : [],
+      recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations.map(String).slice(0, 4) : [],
+      summary: String(parsed.summary || ""),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Visual soil assessment from a photo. Throws on failure so the UI
+ * can show an honest error — never fabricates data.
+ */
+export async function diagnoseSoilImage(
+  imageBase64: string,
+  language: string = "en"
+): Promise<SoilAssessment> {
+  const { base64, mimeType } = await compressImage(imageBase64);
+  const prompt = buildSoilPrompt(language);
+
+  let lastError: unknown = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      if (attempt > 0) await new Promise((r) => setTimeout(r, attempt * 1500));
+      const response = await fetch(GEMINI_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                { text: prompt },
+                { inline_data: { mime_type: mimeType, data: base64 } },
+              ],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.2,
+            maxOutputTokens: 2048,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Gemini API error: ${response.status}`);
+      }
+
+      const data: GeminiResponse = await response.json();
+      const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!reply) throw new Error("Empty response");
+
+      const parsed = extractSoilJSON(reply);
+      if (parsed) return parsed;
+      throw new Error("JSON parse failed");
+    } catch (err) {
+      lastError = err;
+      console.warn(`[AgriNexus] Soil assessment attempt ${attempt + 1} failed:`, err);
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("AI service is busy. Please try again in a moment.");
+}
