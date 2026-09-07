@@ -6,7 +6,8 @@ import { useLanguage } from "../contexts/LanguageContext";
 import { saveMandiSnapshot, fetchMandiHistory, todayStr } from "../lib/supabaseData";
 
 // --- Mandi data (same database as MandiPricePage) ---
-const MANDI_LOCATIONS: { city: string; state: string; district: string; mandis: string[] }[] = [
+// Shared with the merchant NearestMandiWidget so both worlds read identical data.
+export const MANDI_LOCATIONS: { city: string; state: string; district: string; mandis: string[] }[] = [
   { city: "Delhi", state: "Delhi", district: "North Delhi", mandis: ["Azadpur Mandi", "Ghazipur Mandi"] },
   { city: "Delhi", state: "Delhi", district: "East Delhi", mandis: ["Ghazipur Mandi", "Kondli Mandi"] },
   { city: "Mumbai", state: "Maharashtra", district: "Navi Mumbai", mandis: ["Vashi APMC", "Kharghar Mandi"] },
@@ -46,9 +47,9 @@ const MANDI_LOCATIONS: { city: string; state: string; district: string; mandis: 
   { city: "Srinagar", state: "Jammu & Kashmir", district: "Srinagar", mandis: ["Srinagar Mandi"] },
 ];
 
-const TOP_CROPS = ["Wheat", "Paddy", "Tomato", "Mustard", "Potato"];
+export const TOP_CROPS = ["Wheat", "Paddy", "Tomato", "Mustard", "Potato"];
 
-interface MandiPriceData {
+export interface MandiPriceData {
   mandi: string;
   district: string;
   state: string;
@@ -70,7 +71,7 @@ function generatePrice(base: number, seed: number): { price: number; change: num
   return { price, change, changePercent, history };
 }
 
-function getNearbyMandis(state: string, city: string): MandiPriceData[] {
+export function getNearbyMandis(state: string, city: string): MandiPriceData[] {
   const stateLocs = MANDI_LOCATIONS.filter((l) => l.state === state);
   const cityLocs = MANDI_LOCATIONS.filter((l) => l.city === city);
 

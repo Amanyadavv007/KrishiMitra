@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Sprout, AlertCircle, Phone, KeyRound, ArrowLeft, CheckCircle } from "lucide-react";
+import { Sprout, AlertCircle, Phone, KeyRound, ArrowLeft, CheckCircle, Store } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function LoginPage() {
@@ -10,7 +10,9 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
-  const returnTo = new URLSearchParams(window.location.search).get("returnTo") || "/dashboard";
+  const params = new URLSearchParams(window.location.search);
+  const returnTo = params.get("returnTo") || "/dashboard";
+  const asMerchant = params.get("as") === "merchant";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,7 +31,9 @@ export default function LoginPage() {
       const fullPhone = clean.length === 10 ? `+91${clean}` : phone;
       const result = await login(fullPhone, pin);
       if (result.success) {
-        navigate(returnTo);
+        // Account role decides the destination (source of truth is the DB)
+        const isDealer = result.user?.role === "DEALER";
+        navigate(isDealer && returnTo === "/dashboard" ? "/merchant" : returnTo);
       } else {
         setError(result.error || "Login failed. Please try again.");
       }
@@ -48,6 +52,16 @@ export default function LoginPage() {
           </div>
           <h1 className="text-xl font-bold text-slate-900">AgriNexus</h1>
           <p className="text-xs text-slate-500 mt-1">Smart Kheti Sahayak</p>
+          <span
+            className={`inline-flex items-center gap-1.5 mt-2.5 px-3 py-1 rounded-full text-[10px] font-bold tracking-wide ${
+              asMerchant
+                ? "bg-violet-50 text-violet-700 border border-violet-200"
+                : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+            }`}
+          >
+            {asMerchant ? <Store className="w-3 h-3" /> : <Sprout className="w-3 h-3" />}
+            {asMerchant ? "MERCHANT PORTAL" : "FARMER PORTAL"}
+          </span>
         </div>
 
         {error && (
@@ -110,9 +124,12 @@ export default function LoginPage() {
 
         <div className="text-center pt-3 border-t border-slate-100">
           <p className="text-xs text-slate-500">
-            Naya kisan hai?{" "}
-            <Link to="/register" className="text-emerald-600 font-semibold hover:underline">
-              Register karein with PIN
+            {asMerchant ? "Naya merchant hai?" : "Naya kisan hai?"}{" "}
+            <Link
+              to={asMerchant ? "/register?as=merchant" : "/register"}
+              className="text-emerald-600 font-semibold hover:underline"
+            >
+              Register as new user
             </Link>
           </p>
           <Link to="/" className="inline-flex items-center gap-1 text-[11px] text-slate-400 hover:text-emerald-600 mt-2">

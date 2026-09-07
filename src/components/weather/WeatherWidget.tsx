@@ -12,9 +12,14 @@ interface WeatherWidgetProps {
 
 // --- Open-Meteo API helpers ---
 
-function getWMOCondition(code: number): { condition: string; icon: string } {
-  if (code === 0) return { condition: "Clear", icon: "sunny" };
-  if (code <= 3) return { condition: "Partly Cloudy", icon: "partlyCloudy" };
+function getWMOCondition(code: number, isDay = true): { condition: string; icon: string } {
+  // isDay comes from Open-Meteo is_day field: 1 = day, 0 = night
+  if (code === 0) return isDay
+    ? { condition: "Clear", icon: "sunny" }
+    : { condition: "Clear Night", icon: "clearNight" };
+  if (code <= 3) return isDay
+    ? { condition: "Partly Cloudy", icon: "partlyCloudy" }
+    : { condition: "Partly Cloudy (Night)", icon: "cloudy" };
   if (code <= 48) return { condition: "Foggy", icon: "cloudy" };
   if (code <= 57) return { condition: "Drizzle", icon: "lightRain" };
   if (code <= 67) return { condition: "Rainy", icon: "rain" };
@@ -22,13 +27,18 @@ function getWMOCondition(code: number): { condition: string; icon: string } {
   if (code <= 82) return { condition: "Rainy", icon: "rain" };
   if (code <= 86) return { condition: "Snowy", icon: "snow" };
   if (code <= 99) return { condition: "Thunderstorm", icon: "thunder" };
-  return { condition: "Clear", icon: "sunny" };
+  return isDay
+    ? { condition: "Clear", icon: "sunny" }
+    : { condition: "Clear Night", icon: "clearNight" };
 }
 
 function getConditionLabel(cond: string, t: (k: string) => string): string {
   const map: Record<string, string> = {
-    "Clear": t("sunny"), "Partly Cloudy": t("partlyCloudy"), "Foggy": t("cloudy"),
-    "Drizzle": t("lightRain"), "Rainy": t("lightRain"), "Snowy": t("cloudy"),
+    "Clear": t("sunny"), "Clear Night": t("nightClear"),
+    "Partly Cloudy": t("partlyCloudy"), "Partly Cloudy (Night)": t("nightPartlyCloudy"),
+    "Foggy": t("cloudy"),
+    "Drizzle": t("lightRain"), "Rainy": t("lightRain"),
+    "Snowy": t("cloudy"),
     "Thunderstorm": t("lightRain"),
   };
   return map[cond] || cond;
@@ -41,6 +51,12 @@ function getDayLabel(idx: number, t: (k: string) => string): string {
   const d = new Date();
   d.setDate(d.getDate() + idx);
   return days[d.getDay()];
+}
+
+function isNightTime(): boolean {
+  // If the API didn't tell us is_day, fall back to local clock time
+  const h = new Date().getHours();
+  return h < 5 || h >= 20;
 }
 
 // ============================================================
@@ -89,8 +105,8 @@ function CloudShape({ width, height, color, opacity }: { width: number; height: 
 function WeatherAnimation({ condition }: { condition: string }) {
   const condLower = condition.toLowerCase();
 
-  // --- SUNNY / CLEAR ---
-  if (condLower.includes("clear") || condLower.includes("sunny")) {
+  // --- SUNNY / CLEAR (day) ---
+  if ((condLower.includes("clear") || condLower.includes("sunny")) && !condLower.includes("night")) {
     return (
       <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-3xl">
         <style>{`
@@ -114,8 +130,9 @@ function WeatherAnimation({ condition }: { condition: string }) {
     );
   }
 
-  // --- RAINY / DRIZZLE ---
+  // --- RAINY / DRIZZLE (day + night) ---
   if (condLower.includes("rain") || condLower.includes("drizzle")) {
+    const isNightRain = condLower.includes("night");
     return (
       <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-3xl">
         <style>{`
@@ -125,14 +142,12 @@ function WeatherAnimation({ condition }: { condition: string }) {
           @keyframes cloudDrift1 { 0%{transform:translateX(-20px)}50%{transform:translateX(15px)}100%{transform:translateX(-20px)} }
           @keyframes cloudDrift2 { 0%{transform:translateX(10px)}50%{transform:translateX(-15px)}100%{transform:translateX(10px)} }
         `}</style>
-        {/* Dark storm clouds at top */}
         <div className="absolute top-[-2px] left-[-5px]" style={{ animation: "cloudDrift1 8s ease-in-out infinite" }}>
           <CloudShape width={230} height={75} color="rgba(20,30,50,0.85)" opacity={1} />
         </div>
         <div className="absolute top-[12px] right-[-15px]" style={{ animation: "cloudDrift2 10s ease-in-out infinite" }}>
           <CloudShape width={190} height={65} color="rgba(25,35,55,0.75)" opacity={1} />
         </div>
-        {/* HEAVY rain streaks */}
         {Array.from({ length: 35 }).map((_, i) => (
           <div key={`r-${i}`} className="absolute rounded-full"
             style={{
@@ -143,7 +158,6 @@ function WeatherAnimation({ condition }: { condition: string }) {
               animationDelay: `${(i * 0.04) % 0.8}s`,
             }} />
         ))}
-        {/* Water droplets sliding on glass */}
         {Array.from({ length: 12 }).map((_, i) => (
           <div key={`d-${i}`} className="absolute"
             style={{
@@ -155,7 +169,6 @@ function WeatherAnimation({ condition }: { condition: string }) {
               animationDelay: `${i * 0.35}s`,
             }} />
         ))}
-        {/* Splash ripples */}
         {Array.from({ length: 8 }).map((_, i) => (
           <div key={`rp-${i}`} className="absolute rounded-full border border-blue-300/40"
             style={{
@@ -248,8 +261,8 @@ function WeatherAnimation({ condition }: { condition: string }) {
     );
   }
 
-  // --- PARTLY CLOUDY ---
-  if (condLower.includes("part")) {
+  // --- PARTLY CLOUDY (day) ---
+  if (condLower.includes("part") && !condLower.includes("night")) {
     return (
       <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-3xl">
         <style>{`
@@ -269,6 +282,91 @@ function WeatherAnimation({ condition }: { condition: string }) {
     );
   }
 
+  // --- NIGHT CLOUDY ---
+  if (condLower.includes("cloud") && condLower.includes("night")) {
+    return (
+      <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-3xl">
+        <style>{`
+          @keyframes nCloudDrift1 { 0%{transform:translateX(-30px)}50%{transform:translateX(25px)}100%{transform:translateX(-30px)} }
+          @keyframes nCloudDrift2 { 0%{transform:translateX(20px)}50%{transform:translateX(-25px)}100%{transform:translateX(20px)} }
+          @keyframes twinkle { 0%,100%{opacity:.2}50%{opacity:.7} }
+        `}</style>
+        <div className="absolute top-[-2px] left-[-5px]" style={{ animation: "nCloudDrift1 10s ease-in-out infinite" }}>
+          <CloudShape width={250} height={85} color="rgba(20,30,60,0.85)" opacity={1} />
+        </div>
+        <div className="absolute top-[18px] right-[-10px]" style={{ animation: "nCloudDrift2 12s ease-in-out infinite" }}>
+          <CloudShape width={210} height={75} color="rgba(25,35,70,0.75)" opacity={1} />
+        </div>
+        {/* Stars peeking through clouds */}
+        {Array.from({ length: 10 }).map((_, i) => (
+          <div key={`ns-${i}`} className="absolute w-1 h-1 rounded-full bg-indigo-200"
+            style={{
+              left: `${4 + (i * 9.1) % 90}%`,
+              top: `${5 + (i * 7.3) % 40}%`,
+              opacity: 0.2 + (i % 3) * 0.2,
+              animation: `twinkle ${(3 + (i % 4) * 0.5)}s ease-in-out infinite`,
+              animationDelay: `${(i * 0.4) % 5}s`,
+            }} />
+        ))}
+        <div className="absolute inset-0 bg-gradient-to-b from-indigo-900/20 via-indigo-950/10 to-indigo-900/20 rounded-3xl" />
+      </div>
+    );
+  }
+  // --- NIGHT CLOUDY ---
+  if (condLower.includes("cloud") && condLower.includes("night")) {
+    return (
+      <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-3xl">
+        <style>{`
+          @keyframes nCloudDrift1 { 0%{transform:translateX(-30px)}50%{transform:translateX(25px)}100%{transform:translateX(-30px)} }
+          @keyframes nCloudDrift2 { 0%{transform:translateX(20px)}50%{transform:translateX(-25px)}100%{transform:translateX(20px)} }
+          @keyframes twinkle { 0%,100%{opacity:.2}50%{opacity:.7} }
+        `}</style>
+        <div className="absolute top-[-2px] left-[-5px]" style={{ animation: "nCloudDrift1 10s ease-in-out infinite" }}>
+          <CloudShape width={250} height={85} color="rgba(20,30,60,0.85)" opacity={1} />
+        </div>
+        <div className="absolute top-[18px] right-[-10px]" style={{ animation: "nCloudDrift2 12s ease-in-out infinite" }}>
+          <CloudShape width={210} height={75} color="rgba(25,35,70,0.75)" opacity={1} />
+        </div>
+        {/* Stars peeking through clouds */}
+        {Array.from({ length: 10 }).map((_, i) => (
+          <div key={`ns-${i}`} className="absolute w-1 h-1 rounded-full bg-indigo-200"
+            style={{
+              left: `${4 + (i * 9.1) % 90}%`,
+              top: `${5 + (i * 7.3) % 40}%`,
+              opacity: 0.2 + (i % 3) * 0.2,
+              animation: `twinkle ${(3 + (i % 4) * 0.5)}s ease-in-out infinite`,
+              animationDelay: `${(i * 0.4) % 5}s`,
+            }} />
+        ))}
+        <div className="absolute inset-0 bg-gradient-to-b from-indigo-900/20 via-indigo-950/10 to-indigo-900/20 rounded-3xl" />
+      </div>
+    );
+  }
+  // --- CLOUDY / FOGGY (day) ---
+  if (condLower.includes("cloud") || condLower.includes("fog")) {
+    return (
+      <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-3xl">
+        <style>{`
+          @keyframes cDrift1 { 0%{transform:translateX(-30px)}50%{transform:translateX(25px)}100%{transform:translateX(-30px)} }
+          @keyframes cDrift2 { 0%{transform:translateX(20px)}50%{transform:translateX(-25px)}100%{transform:translateX(20px)} }
+          @keyframes cDrift3 { 0%{transform:translateX(-15px) translateY(3px)}50%{transform:translateX(20px) translateY(-2px)}100%{transform:translateX(-15px) translateY(3px)} }
+          @keyframes cDrift4 { 0%{transform:translateX(10px) translateY(-2px)}50%{transform:translateX(-18px) translateY(3px)}100%{transform:translateX(10px) translateY(-2px)} }
+        `}</style>
+        <div className="absolute top-[-2px] left-[-5px]" style={{ animation: "cDrift1 10s ease-in-out infinite" }}>
+          <CloudShape width={250} height={85} color="rgba(30,58,95,0.7)" opacity={1} />
+        </div>
+        <div className="absolute top-[18px] right-[-10px]" style={{ animation: "cDrift2 12s ease-in-out infinite" }}>
+          <CloudShape width={210} height={75} color="rgba(35,65,105,0.6)" opacity={1} />
+        </div>
+        <div className="absolute bottom-[25px] left-[10px]" style={{ animation: "cDrift3 14s ease-in-out infinite" }}>
+          <CloudShape width={170} height={65} color="rgba(25,50,85,0.5)" opacity={1} />
+        </div>
+        <div className="absolute top-[40px] left-[30%]" style={{ animation: "cDrift4 11s ease-in-out infinite" }}>
+          <CloudShape width={140} height={55} color="rgba(30,55,90,0.45)" opacity={1} />
+        </div>
+      </div>
+    );
+  }
   // --- SNOW ---
   if (condLower.includes("snow")) {
     return (
@@ -288,12 +386,58 @@ function WeatherAnimation({ condition }: { condition: string }) {
     );
   }
 
+  // --- CLEAR NIGHT (moon) ---
+  if (condLower.includes("clear") && condLower.includes("night")) {
+    return (
+      <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-3xl">
+        <style>{`
+          @keyframes moonGlow { 0%,100%{opacity:.5;transform:scale(1)}50%{opacity:.7;transform:scale(1.08)} }
+          @keyframes twinkle { 0%,100%{opacity:.3}50%{opacity:1} }
+        `}</style>
+        {/* Big soft moon glow */}
+        <div className="absolute top-3 right-3 w-20 h-20 rounded-full bg-gradient-to-br from-indigo-200 via-indigo-300 to-indigo-400"
+          style={{ animation: "moonGlow 5s ease-in-out infinite", filter: "blur(1px)" }} />
+        {/* Moon disc */}
+        <div className="absolute top-3 right-3 w-12 h-12 rounded-full bg-gradient-to-br from-yellow-100 via-indigo-100 to-indigo-300"
+          style={{ animation: "moonGlow 5s ease-in-out infinite" }} />
+        {/* Twinkling stars */}
+        {Array.from({ length: 18 }).map((_, i) => (
+          <div key={`star-${i}`} className="absolute w-1 h-1 rounded-full bg-white"
+            style={{
+              left: `${3 + (i * 5.3) % 92}%`,
+              top: `${4 + (i * 6.1) % 60}%`,
+              opacity: 0.3 + (i % 3) * 0.3,
+              animation: `twinkle ${(2 + (i % 4) * 0.7)}s ease-in-out infinite`,
+              animationDelay: `${(i * 0.3) % 4}s`,
+            }} />
+        ))}
+        <div className="absolute inset-0 bg-gradient-to-b from-indigo-950/30 via-indigo-900/15 to-indigo-950/40 rounded-3xl" />
+      </div>
+    );
+  }
+
   return null;
 }
 
 // --- Weather Icon Selector ---
 function WeatherIcon({ condition }: { condition: string }) {
   const condLower = condition.toLowerCase();
+  // --- CLEAR NIGHT ---
+  if (condLower.includes("clear") && condLower.includes("night")) {
+    return (
+      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-300/20 to-indigo-500/15 flex items-center justify-center">
+        <svg width="36" height="36" viewBox="0 0 36 36">
+          {/* Crescent moon */}
+          <path d="M22 8a9 9 0 1 0 0 18 8.5 8.5 0 0 0 0-17z" fill="#E0E7FF" />
+          {/* Stars */}
+          {Array.from({ length: 4 }).map((_, i) => (
+            <circle key={i} cx={6 + i * 4} cy={5 + (i * 3) % 20} r="0.8"
+              fill="#C7D2FE" opacity={0.7 + (i % 3) * 0.1} />
+          ))}
+        </svg>
+      </div>
+    );
+  }
   if (condLower.includes("clear") || condLower.includes("sunny")) {
     return (
       <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-300/20 to-orange-400/20 flex items-center justify-center">
@@ -378,13 +522,16 @@ export default function WeatherWidget({ showForecast = true, variant = "solid" }
       if (!res.ok) throw new Error(`Weather API returned ${res.status}`);
       const data = await res.json();
       const currentCode = data.current?.weather_code ?? 0;
-      const condInfo = getWMOCondition(currentCode);
+      // Open-Meteo returns is_day: 1 (day) or 0 (night) — key for correct day/night display
+      const apiIsDay = data.current?.is_day === 1;
+      const condInfo = getWMOCondition(currentCode, apiIsDay);
       const current = {
         temp: Math.round(data.current?.temperature_2m ?? 28),
         condition: condInfo.condition,
         humidity: data.current?.relative_humidity_2m ?? 60,
         windSpeed: Math.round(data.current?.wind_speed_10m ?? 10),
         rainfallChance: data.current?.rain_probability ?? 15,
+        isDay: apiIsDay,
       };
       const forecast = (data.daily?.time ?? []).map((dateStr: string, i: number) => {
         const dayCode = data.daily?.weather_code?.[i] ?? 0;
@@ -424,10 +571,11 @@ export default function WeatherWidget({ showForecast = true, variant = "solid" }
       console.warn("Open-Meteo failed:", err);
       setError("Weather data temporarily unavailable");
       setWeather({
-        current: { temp: 29, condition: "Partly Cloudy", humidity: 65, windSpeed: 12, rainfallChance: 20 },
+        // If the API fails, use local time to decide day vs night
+        current: { temp: 29, condition: isNightTime() ? "Clear Night" : "Partly Cloudy", humidity: 65, windSpeed: 12, rainfallChance: 20, isDay: !isNightTime() },
         forecast: Array.from({ length: 5 }, (_, i) => ({
           day: getDayLabel(i, t), temp: 30 + Math.round(Math.random() * 5 - 2),
-          condition: ["Clear", "Partly Cloudy", "Clear", "Cloudy", "Clear"][i], rain: [5, 15, 10, 30, 5][i],
+          condition: i === 0 && isNightTime() ? "Clear Night" : ["Clear", "Partly Cloudy", "Clear", "Cloudy", "Clear"][i], rain: [5, 15, 10, 30, 5][i],
         })),
         advisory: t("advisoryFavorable") || "Favorable weather.",
       });
@@ -463,12 +611,20 @@ export default function WeatherWidget({ showForecast = true, variant = "solid" }
   const conditionLabel = getConditionLabel(current.condition, t);
 
   const condLower = current.condition.toLowerCase();
+  const isNight = condLower.includes("night");
   let bgClass = "bg-gradient-to-br from-sky-400 via-blue-500 to-blue-600";
-  if (condLower.includes("clear") || condLower.includes("sunny")) bgClass = "bg-gradient-to-br from-sky-400 via-blue-400 to-blue-500";
+  if (condLower.includes("clear") && isNight) bgClass = "bg-gradient-to-br from-indigo-800 via-indigo-900 to-indigo-950";
+  else if (condLower.includes("clear") || condLower.includes("sunny")) bgClass = "bg-gradient-to-br from-sky-400 via-blue-400 to-blue-500";
   else if (condLower.includes("thunder")) bgClass = "bg-gradient-to-br from-slate-800 via-purple-950 to-slate-900";
-  else if (condLower.includes("rain") || condLower.includes("drizzle")) bgClass = "bg-gradient-to-br from-slate-600 via-blue-800 to-slate-800";
-  else if (condLower.includes("cloud") && condLower.includes("part")) bgClass = "bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700";
-  else if (condLower.includes("cloud") || condLower.includes("fog")) bgClass = "bg-gradient-to-br from-blue-700 via-blue-800 to-slate-800";
+  else if (condLower.includes("rain") || condLower.includes("drizzle")) bgClass = isNight
+    ? "bg-gradient-to-br from-indigo-800 via-slate-800 to-indigo-950"
+    : "bg-gradient-to-br from-slate-600 via-blue-800 to-slate-800";
+  else if (condLower.includes("cloud") && condLower.includes("part")) bgClass = isNight
+    ? "bg-gradient-to-br from-indigo-700 via-indigo-800 to-indigo-900"
+    : "bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700";
+  else if (condLower.includes("cloud") || condLower.includes("fog")) bgClass = isNight
+    ? "bg-gradient-to-br from-indigo-800 via-slate-800 to-indigo-950"
+    : "bg-gradient-to-br from-blue-700 via-blue-800 to-slate-800";
   else if (condLower.includes("snow")) bgClass = "bg-gradient-to-br from-blue-400 via-blue-500 to-slate-500";
 
   return (
