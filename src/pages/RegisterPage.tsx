@@ -86,7 +86,7 @@ export default function RegisterPage() {
       });
 
       if (result.success) {
-        navigate(asMerchant ? "/dealer-dashboard" : "/dashboard");
+        navigate(asMerchant ? "/merchant" : "/dashboard");
       } else {
         setError(result.error || "Registration failed");
       }

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation as useRouterLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import { LocationProvider } from "./contexts/LocationContext";
@@ -10,6 +10,8 @@ import Footer from "./components/layout/Footer";
 import MobileNav from "./components/layout/MobileNav";
 import LanguageOnboardingModal from "./components/common/LanguageOnboardingModal";
 import RoleSelectModal from "./components/common/RoleSelectModal";
+import MerchantNavbar from "./components/merchant/MerchantNavbar";
+import RequireRole from "./components/auth/RequireRole";
 
 import LandingPage from "./pages/LandingPage";
 import FarmerDashboard from "./pages/FarmerDashboard";
@@ -29,6 +31,8 @@ import FarmerProfilePage from "./pages/FarmerProfilePage";
 import AdminDashboard from "./pages/AdminDashboard";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+import MerchantLandingPage from "./pages/MerchantLandingPage";
+import MerchantComingSoon from "./pages/MerchantComingSoon";
 
 // 5 New Advanced Agricultural Intelligence Pages
 import DigitalTwinPage from "./pages/DigitalTwinPage";
@@ -55,6 +59,9 @@ export default function App() {
 
 function AppShell() {
   const { user } = useAuth();
+  const routerLocation = useRouterLocation();
+  // Merchant area uses its own navbar; the farmer navbar/mobile nav is hidden there.
+  const isMerchantArea = routerLocation.pathname.startsWith("/merchant");
   // Popups show on every visit while logged out (no persistence); once logged in, never again.
   const [langSelected, setLangSelected] = useState(false);
   const [roleSelected, setRoleSelected] = useState(false);
@@ -72,7 +79,8 @@ function AppShell() {
                   onboardingOpen ? "blur-onboarding" : ""
                 }`}
               >
-                <Navbar />
+                {!isMerchantArea && <Navbar />}
+                {isMerchantArea && <MerchantNavbar />}
                 <main className="flex-1">
                   <Routes>
                     {/* Existing Features */}
@@ -95,6 +103,49 @@ function AppShell() {
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/register" element={<RegisterPage />} />
 
+                    {/* Merchant World (role-guarded) */}
+                    <Route
+                      path="/merchant"
+                      element={
+                        <RequireRole role="DEALER">
+                          <MerchantLandingPage />
+                        </RequireRole>
+                      }
+                    />
+                    <Route
+                      path="/merchant/search"
+                      element={
+                        <RequireRole role="DEALER">
+                          <MerchantComingSoon
+                            title="Crop Search & Filter"
+                            description="Search any crop, set quantity, grade and price range — and instantly see nearby farmers with live stock and ratings."
+                          />
+                        </RequireRole>
+                      }
+                    />
+                    <Route
+                      path="/merchant/dashboard"
+                      element={
+                        <RequireRole role="DEALER">
+                          <MerchantComingSoon
+                            title="Merchant Dashboard"
+                            description="Your complete purchase history: what you bought, from whom, how much you spent, and every deal's status."
+                          />
+                        </RequireRole>
+                      }
+                    />
+                    <Route
+                      path="/merchant/contacts"
+                      element={
+                        <RequireRole role="DEALER">
+                          <MerchantComingSoon
+                            title="B2B Contacts"
+                            description="Direct call and WhatsApp contacts of every registered farmer near your location."
+                          />
+                        </RequireRole>
+                      }
+                    />
+
                     {/* 5 Advanced AI Engines */}
                     <Route path="/digital-twin" element={<DigitalTwinPage />} />
                     <Route path="/consensus-engine" element={<ConsensusEnginePage />} />
@@ -109,7 +160,7 @@ function AppShell() {
                     <Route path="/supply-chain" element={<SupplyChainPage />} />
                   </Routes>
                 </main>                <Footer />
-                <MobileNav />
+                {!isMerchantArea && <MobileNav />}
               </div>
               <LanguageOnboardingModal
                 open={showLangModal}

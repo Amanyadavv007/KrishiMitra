@@ -33,7 +33,7 @@ export default function LoginPage() {
       if (result.success) {
         // Account role decides the destination (source of truth is the DB)
         const isDealer = result.user?.role === "DEALER";
-        navigate(isDealer && returnTo === "/dashboard" ? "/dealer-dashboard" : returnTo);
+        navigate(isDealer && returnTo === "/dashboard" ? "/merchant" : returnTo);
       } else {
         setError(result.error || "Login failed. Please try again.");
       }
