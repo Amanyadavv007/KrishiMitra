@@ -13,6 +13,8 @@ export interface User {
   village: string;
   address: string;
   role: "FARMER" | "DEALER" | "ADMIN";
+  shopName?: string;
+  shopCategory?: string;
   createdAt: string;
 }
 
@@ -27,13 +29,15 @@ export interface RegisterInput {
   pincode: string;
   address: string;
   role: "FARMER" | "DEALER" | "ADMIN";
+  shopName?: string;
+  shopCategory?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (phone: string, pin: string) => Promise<{ success: boolean; error?: string }>;
-  register: (data: RegisterInput) => Promise<{ success: boolean; error?: string }>;
+  login: (phone: string, pin: string) => Promise<{ success: boolean; error?: string; user?: User }>;
+  register: (data: RegisterInput) => Promise<{ success: boolean; error?: string; user?: User }>;
   logout: () => void;
   updateProfile: (data: Partial<User>) => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -78,6 +82,8 @@ function mapFarmerRow(row: any): User {
     village: row.village || "",
     address: row.address || "",
     role: row.role || "FARMER",
+    shopName: row.shop_name || "",
+    shopCategory: row.shop_category || "",
     createdAt: row.created_at || new Date().toISOString(),
   };
 }
@@ -129,7 +135,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 // ---- LOGIN with Mobile Number + PIN ----
   const login = useCallback(
-    async (phone: string, pin: string): Promise<{ success: boolean; error?: string }> => {
+    async (phone: string, pin: string): Promise<{ success: boolean; error?: string; user?: User }> => {
       try {
         const cleanPhone = normalizePhone(phone);
         if (!isValidPin(pin)) {
@@ -157,7 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const u = mapFarmerRow(data);
           setUser(u);
           localStorage.setItem("agn_current_user", JSON.stringify(u));
-          return { success: true };
+          return { success: true, user: u };
         }
 
         // localStorage fallback
@@ -168,7 +174,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { pinHash: _ph, ...pubUser } = found;
         setUser(pubUser);
         localStorage.setItem("agn_current_user", JSON.stringify(pubUser));
-        return { success: true };
+        return { success: true, user: pubUser };
       } catch (e: any) {
         return { success: false, error: e?.message || "Login failed. Please try again." };
       }
@@ -178,7 +184,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 // ---- REGISTER with Mobile Number + PIN ----
   const register = useCallback(
-    async (data: RegisterInput): Promise<{ success: boolean; error?: string }> => {
+    async (data: RegisterInput): Promise<{ success: boolean; error?: string; user?: User }> => {
       try {
         const cleanPhone = normalizePhone(data.phone);
         if (!data.name.trim()) return { success: false, error: "Please enter your name." };
@@ -196,22 +202,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return { success: false, error: "This mobile number is already registered. Please login instead." };
           }
 
-          const { data: created, error } = await supabase
+          const basePayload = {
+            phone: cleanPhone,
+            name: data.name.trim(),
+            village: data.village || "",
+            city: data.city || "",
+            state: data.state || "",
+            district: data.district || "",
+            pincode: data.pincode || "",
+            address: data.address || "",
+            role: data.role || "FARMER",
+            pin_hash: pinHash,
+          };
+          const merchantFields =
+            data.role === "DEALER"
+              ? { shop_name: data.shopName || "", shop_category: data.shopCategory || "" }
+              : {};
+
+          let { data: created, error } = await supabase
             .from("farmers")
-            .insert({
-              phone: cleanPhone,
-              name: data.name.trim(),
-              village: data.village || "",
-              city: data.city || "",
-              state: data.state || "",
-              district: data.district || "",
-              pincode: data.pincode || "",
-              address: data.address || "",
-              role: data.role || "FARMER",
-              pin_hash: pinHash,
-            })
+            .insert({ ...basePayload, ...merchantFields })
             .select()
             .single();
+
+          // If migration 005 (shop columns) hasn't run yet, retry without them
+          if (error && data.role === "DEALER") {
+            const retry = await supabase.from("farmers").insert(basePayload).select().single();
+            created = retry.data;
+            error = retry.error;
+          }
 
           if (error) {
             return { success: false, error: `Registration failed: ${error.message}` };
@@ -223,9 +242,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await supabase.from("activity_log").insert({
             farmer_id: u.id,
             action: "register",
-            details: { name: u.name, city: u.city, state: u.state },
+            details: { name: u.name, city: u.city, state: u.state, role: u.role },
           });
-          return { success: true };
+          return { success: true, user: u };
         }
 
         // localStorage fallback
@@ -273,7 +292,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(updated);
     localStorage.setItem("agn_current_user", JSON.stringify(updated));
     if (isSupabaseConfigured() && supabase) {
-      const { id: _id, createdAt: _ca, role: _role, ...fields } = updated;
+      const {
+        id: _id,
+        createdAt: _ca,
+        role: _role,
+        shopName: _sn,
+        shopCategory: _sc,
+        ...fields
+      } = updated;
       await supabase
         .from("farmers")
         .update({ ...fields, updated_at: new Date().toISOString() })

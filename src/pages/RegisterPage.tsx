@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Sprout, AlertCircle, MapPin, Navigation, Loader2, CheckCircle } from "lucide-react";
+import { Sprout, AlertCircle, MapPin, Navigation, Loader2, CheckCircle, Store } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function RegisterPage() {
+  const asMerchant = new URLSearchParams(window.location.search).get("as") === "merchant";
   const [name, setName] = useState("");
+  const [shopName, setShopName] = useState("");
+  const [shopCategory, setShopCategory] = useState("");
   const [phone, setPhone] = useState("");
   const [village, setVillage] = useState("");
   const [address, setAddress] = useState("");
@@ -77,11 +80,13 @@ export default function RegisterPage() {
         state: state.trim(),
         district: district.trim(),
         pincode: pincode.trim(),
-        role: "FARMER",
+        role: asMerchant ? "DEALER" : "FARMER",
+        shopName: asMerchant ? shopName.trim() : undefined,
+        shopCategory: asMerchant ? shopCategory : undefined,
       });
 
       if (result.success) {
-        navigate("/dashboard");
+        navigate(asMerchant ? "/dealer-dashboard" : "/dashboard");
       } else {
         setError(result.error || "Registration failed");
       }
@@ -100,6 +105,16 @@ export default function RegisterPage() {
           </div>
           <h1 className="text-xl font-bold text-slate-900">Naya Account Banayein</h1>
           <p className="text-xs text-slate-500 mt-1">AgriNexus par register karein</p>
+          <span
+            className={`inline-flex items-center gap-1.5 mt-2.5 px-3 py-1 rounded-full text-[10px] font-bold tracking-wide ${
+              asMerchant
+                ? "bg-violet-50 text-violet-700 border border-violet-200"
+                : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+            }`}
+          >
+            {asMerchant ? <Store className="w-3 h-3" /> : <Sprout className="w-3 h-3" />}
+            {asMerchant ? "REGISTERING AS MERCHANT" : "REGISTERING AS FARMER"}
+          </span>
         </div>
 
         {error && (
@@ -170,6 +185,37 @@ export default function RegisterPage() {
               />
             </div>
           </div>
+
+          {/* Merchant shop details */}
+          {asMerchant && (
+            <>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Dukaan Ka Naam (Shop Name)</label>
+                <input
+                  type="text"
+                  value={shopName}
+                  onChange={(e) => setShopName(e.target.value)}
+                  placeholder="e.g. Sharma Seed & Fertilizer Store"
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Business Category</label>
+                <select
+                  value={shopCategory}
+                  onChange={(e) => setShopCategory(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                >
+                  <option value="">Select category (optional)</option>
+                  <option value="Seeds & Fertilizers">Seeds & Fertilizers</option>
+                  <option value="Pesticides & Crop Care">Pesticides & Crop Care</option>
+                  <option value="Farm Equipment">Farm Equipment</option>
+                  <option value="Grains / Produce Trading">Grains / Produce Trading</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </>
+          )}
 
           {/* Village */}
           <div>

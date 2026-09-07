@@ -9,6 +9,7 @@ import Navbar from "./components/layout/Navbar";
 import Footer from "./components/layout/Footer";
 import MobileNav from "./components/layout/MobileNav";
 import LanguageOnboardingModal from "./components/common/LanguageOnboardingModal";
+import RoleSelectModal from "./components/common/RoleSelectModal";
 
 import LandingPage from "./pages/LandingPage";
 import FarmerDashboard from "./pages/FarmerDashboard";
@@ -54,9 +55,12 @@ export default function App() {
 
 function AppShell() {
   const { user } = useAuth();
-  // Popup shows on every visit while logged out; once logged in, never again.
+  // Popups show on every visit while logged out (no persistence); once logged in, never again.
   const [langSelected, setLangSelected] = useState(false);
+  const [roleSelected, setRoleSelected] = useState(false);
   const showLangModal = !user && !langSelected;
+  const showRoleModal = !user && langSelected && !roleSelected;
+  const onboardingOpen = !user && (!langSelected || !roleSelected);
 
   return (
     <>
@@ -65,7 +69,7 @@ function AppShell() {
             <SocketProvider>
               <div
                 className={`flex flex-col min-h-screen bg-slate-50 text-slate-900 pb-16 lg:pb-0 selection:bg-emerald-500 selection:text-white transition-[filter] duration-300 ${
-                  showLangModal ? "blur-onboarding" : ""
+                  onboardingOpen ? "blur-onboarding" : ""
                 }`}
               >
                 <Navbar />
@@ -110,6 +114,10 @@ function AppShell() {
               <LanguageOnboardingModal
                 open={showLangModal}
                 onSelect={() => setLangSelected(true)}
+              />
+              <RoleSelectModal
+                open={showRoleModal}
+                onSelect={() => setRoleSelected(true)}
               />
             </SocketProvider>
           </LocationProvider>
