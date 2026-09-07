@@ -32,6 +32,8 @@ import AdminDashboard from "./pages/AdminDashboard";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import MerchantLandingPage from "./pages/MerchantLandingPage";
+import MerchantSearchPage from "./pages/MerchantSearchPage";
+import MerchantDashboardPage from "./pages/MerchantDashboardPage";
 import MerchantComingSoon from "./pages/MerchantComingSoon";
 
 // 5 New Advanced Agricultural Intelligence Pages
@@ -116,10 +118,7 @@ function AppShell() {
                       path="/merchant/search"
                       element={
                         <RequireRole role="DEALER">
-                          <MerchantComingSoon
-                            title="Crop Search & Filter"
-                            description="Search any crop, set quantity, grade and price range — and instantly see nearby farmers with live stock and ratings."
-                          />
+                          <MerchantSearchPage />
                         </RequireRole>
                       }
                     />
@@ -127,10 +126,7 @@ function AppShell() {
                       path="/merchant/dashboard"
                       element={
                         <RequireRole role="DEALER">
-                          <MerchantComingSoon
-                            title="Merchant Dashboard"
-                            description="Your complete purchase history: what you bought, from whom, how much you spent, and every deal's status."
-                          />
+                          <MerchantDashboardPage />
                         </RequireRole>
                       }
                     />
