@@ -371,7 +371,8 @@ export async function fetchTwinState(
   field?: { name: string | null; areaAcres: number | null },
   opts?: { force?: boolean }
 ): Promise<TwinState> {
-  const cacheKey = `${lat.toFixed(2)},${lon.toFixed(2)}`;
+  // ~0.001° (~110 m) precision — fine enough that two nearby-but-different plots never share a cache entry
+  const cacheKey = `${lat.toFixed(3)},${lon.toFixed(3)}`;
   if (!opts?.force) {
     const cached = readCache(cacheKey);
     if (cached) return cached;

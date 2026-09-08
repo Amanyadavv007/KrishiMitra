@@ -220,14 +220,18 @@ export default function DigitalTwinPage() {
   const [pulsing, setPulsing] = useState(false);
   const [lastSync, setLastSync] = useState<Date | null>(null);
   const [fieldSavedTick, setFieldSavedTick] = useState(0);
+  const [twinCoords, setTwinCoords] = useState<{ lat: number; lon: number } | null>(null);
 
   const field = useMemo(() => loadTwinField(), [fieldSavedTick]);
 
   const load = useCallback((force = false) => {
     setLoading(true);
     setError(null);
-    const lat = latitude ?? 28.6139;
-    const lon = longitude ?? 77.2090;
+    // Prefer the saved field's own centroid — the twin must describe the land the
+    // farmer actually selected, not wherever the device GPS happens to be.
+    const lat = field?.centroid?.lat ?? latitude ?? 28.6139;
+    const lon = field?.centroid?.lng ?? longitude ?? 77.2090;
+    setTwinCoords({ lat, lon });
     fetchTwinState(
       lat,
       lon,
@@ -239,7 +243,7 @@ export default function DigitalTwinPage() {
       .then(setTwin)
       .catch((e) => setError(e?.message || "Could not load digital twin data"))
       .finally(() => setLoading(false));
-  }, [latitude, longitude, state, district, field?.name, field?.areaAcres]);
+  }, [latitude, longitude, state, district, field?.name, field?.areaAcres, field?.centroid?.lat, field?.centroid?.lng]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -297,6 +301,13 @@ export default function DigitalTwinPage() {
               <span>{t.district}, {t.state} • {t.soilClass} soil</span>
               {(field?.areaAcres ?? t.areaAcres) != null && <span className="font-semibold text-slate-700">• {field?.areaAcres ?? t.areaAcres} acres</span>}
             </p>
+            {twinCoords && (
+              <p className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1">
+                <Crosshair className="w-3 h-3" />
+                Data source: {twinCoords.lat.toFixed(3)}°, {twinCoords.lon.toFixed(3)}°
+                {field?.centroid ? " — your drawn plot" : " — device GPS (draw your plot on the map below for plot-specific data)"}
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <button
