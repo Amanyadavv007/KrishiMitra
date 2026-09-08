@@ -32,15 +32,20 @@ export default function MarketplacePage() {
   const [maxPrice, setMaxPrice] = useState(0);
   const [addedId, setAddedId] = useState<string | null>(null);
 
-  useEffect(() => {
-    let alive = true;
+  const loadMarket = () => {
     fetchMarketplace(loc.city || "")
-      .then((p) => alive && setProducts(p))
-      .catch(() => alive && setProducts([]))
-      .finally(() => alive && setLoading(false));
-    return () => {
-      alive = false;
-    };
+      .then((p) => setProducts(p))
+      .catch(() => setProducts([]))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(loadMarket, [loc.city]);
+
+  // Live updates: refresh when a farmer lists a new product (Phase 7)
+  useEffect(() => {
+    const onFocus = () => loadMarket();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
   }, [loc.city]);
 
   const results = useMemo(

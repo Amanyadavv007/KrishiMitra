@@ -280,3 +280,227 @@ export function searchMarketplace(products: MarketProduct[], filters: SearchFilt
 export function productDisplayName(p: MarketProduct): string {
   return `${p.emoji} ${p.productName}`;
 }
+
+// ============================================================
+// Phase 6 — Customer orders (customer_orders table, migration 008)
+// ============================================================
+
+export interface CustomerOrderItem {
+  productId: string;
+  productName: string;
+  emoji: string;
+  farmerId: string;
+  farmerName: string;
+  pricePerKg: number;
+  unit: string;
+  quantity: number;
+}
+
+export type CustomerOrderStatus = "PLACED" | "CONFIRMED" | "COMPLETED" | "CANCELLED";
+
+export interface CustomerOrder {
+  id: string;
+  orderNumber: string;
+  customerId: string;
+  customerName: string;
+  customerPhone: string;
+  address: string;
+  items: CustomerOrderItem[];
+  totalAmount: number;
+  status: CustomerOrderStatus;
+  createdAt: string;
+}
+
+const LS_ORDERS_KEY = "agn_customer_orders";
+
+function readOrdersLS(): CustomerOrder[] {
+  try {
+    return JSON.parse(localStorage.getItem(LS_ORDERS_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function writeOrdersLS(all: CustomerOrder[]) {
+  try {
+    localStorage.setItem(LS_ORDERS_KEY, JSON.stringify(all.slice(0, 100)));
+  } catch {
+    // ignore quota errors
+  }
+}
+
+function mapOrderRow(row: any): CustomerOrder {
+  let items: CustomerOrderItem[] = [];
+  try {
+    const raw = typeof row.items === "string" ? JSON.parse(row.items) : row.items;
+    items = Array.isArray(raw) ? raw : [];
+  } catch {
+    items = [];
+  }
+  return {
+    id: String(row.id),
+    orderNumber: row.order_number || "",
+    customerId: String(row.customer_id || ""),
+    customerName: row.customer_name || "",
+    customerPhone: row.customer_phone || "",
+    address: row.address || "",
+    items,
+    totalAmount: Number(row.total_amount) || 0,
+    status: (row.status || "PLACED") as CustomerOrderStatus,
+    createdAt: row.created_at || "",
+  };
+}
+
+export async function placeCustomerOrder(order: {
+  customerId: string;
+  customerName: string;
+  customerPhone: string;
+  address: string;
+  items: CustomerOrderItem[];
+  totalAmount: number;
+}): Promise<CustomerOrder | null> {
+  const orderNumber = `KO-${Date.now().toString(36).toUpperCase()}`;
+
+  if (isSupabaseConfigured() && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from("customer_orders")
+        .insert({
+          order_number: orderNumber,
+          customer_id: order.customerId,
+          customer_name: order.customerName,
+          customer_phone: order.customerPhone,
+          address: order.address,
+          items: order.items,
+          total_amount: order.totalAmount,
+          status: "PLACED",
+        })
+        .select()
+        .single();
+      if (!error && data) return mapOrderRow(data);
+    } catch {
+      // migration 008 not run yet — fall through to localStorage
+    }
+  }
+
+  // localStorage fallback (demo mode)
+  const local: CustomerOrder = {
+    id: `ord-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    orderNumber,
+    ...order,
+    status: "PLACED",
+    createdAt: new Date().toISOString(),
+  };
+  const all = readOrdersLS();
+  all.unshift(local);
+  writeOrdersLS(all);
+  return local;
+}
+
+export async function fetchCustomerOrders(customerId: string): Promise<CustomerOrder[]> {
+  if (isSupabaseConfigured() && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from("customer_orders")
+        .select("*")
+        .eq("customer_id", customerId)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (!error && data && data.length > 0) {
+        return (data as any[]).map(mapOrderRow);
+      }
+    } catch {
+      // fall through
+    }
+  }
+  return readOrdersLS().filter((o) => o.customerId === customerId);
+}
+
+export async function cancelCustomerOrder(orderId: string, customerId: string): Promise<boolean> {
+  if (isSupabaseConfigured() && supabase) {
+    try {
+      const { error } = await supabase
+        .from("customer_orders")
+        .update({ status: "CANCELLED", updated_at: new Date().toISOString() })
+        .eq("id", orderId)
+        .eq("customer_id", customerId);
+      if (!error) return true;
+    } catch {
+      // fall through
+    }
+  }
+  const all = readOrdersLS();
+  const idx = all.findIndex((o) => o.id === orderId && o.customerId === customerId);
+  if (idx < 0) return false;
+  all[idx] = { ...all[idx], status: "CANCELLED" };
+  writeOrdersLS(all);
+  return true;
+}
+
+// ============================================================
+// Phase 7 — farmer uploads a product to the marketplace
+// (writes farmer_inventory with product_type + image_emoji)
+// ============================================================
+
+export interface UploadProductInput {
+  farmerId: string;
+  productName: string;
+  productType: ProductType;
+  emoji: string;
+  quantity: number;
+  unit: "kg" | "quintal";
+  grade: "A" | "B" | "C";
+  pricePerKg: number;
+  harvestDate: string;
+  storageLocation: string;
+}
+
+export async function uploadMarketplaceProduct(input: UploadProductInput): Promise<{ ok: boolean; error?: string }> {
+  if (isSupabaseConfigured() && supabase) {
+    try {
+      const { error } = await supabase.from("farmer_inventory").insert({
+        farmer_id: input.farmerId,
+        crop_name: input.productName,
+        quantity: input.quantity,
+        unit: input.unit,
+        grade: input.grade,
+        harvest_date: input.harvestDate || null,
+        price_per_unit: input.pricePerKg,
+        storage_location: input.storageLocation || "home",
+        status: "available",
+        product_type: input.productType,
+        image_emoji: input.emoji,
+      });
+      if (!error) return { ok: true };
+      // Older schema without product_type — retry without the new columns
+      if (/column.*does not exist|product_type|image_emoji/i.test(error.message || "")) {
+        const retry = await supabase.from("farmer_inventory").insert({
+          farmer_id: input.farmerId,
+          crop_name: input.productName,
+          quantity: input.quantity,
+          unit: input.unit,
+          grade: input.grade,
+          harvest_date: input.harvestDate || null,
+          price_per_unit: input.pricePerKg,
+          storage_location: input.storageLocation || "home",
+          status: "available",
+        });
+        if (!retry.error) return { ok: true };
+        return { ok: false, error: retry.error.message };
+      }
+      return { ok: false, error: error.message };
+    } catch (e: any) {
+      return { ok: false, error: e?.message || "Upload failed" };
+    }
+  }
+  // Demo mode: keep local listings so the flow is testable offline
+  try {
+    const raw = localStorage.getItem("agn_local_listings");
+    const list = raw ? JSON.parse(raw) : [];
+    list.unshift(input);
+    localStorage.setItem("agn_local_listings", JSON.stringify(list.slice(0, 50)));
+  } catch {
+    // ignore
+  }
+  return { ok: true };
+}

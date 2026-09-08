@@ -48,6 +48,9 @@ const MarketplaceCustomerPage = lazy(() => import("./pages/MarketplaceCustomerPa
 const FarmerConnectPage = lazy(() => import("./pages/FarmerConnectPage"));
 const FarmerStorefrontPage = lazy(() => import("./pages/FarmerStorefrontPage"));
 const CustomerChatPage = lazy(() => import("./pages/CustomerChatPage"));
+const MyOrdersPage = lazy(() => import("./pages/MyOrdersPage"));
+const CustomerProfilePage = lazy(() => import("./pages/CustomerProfilePage"));
+const SellOnMarketplacePage = lazy(() => import("./pages/SellOnMarketplacePage"));
 
 // 5 New Advanced Agricultural Intelligence Pages
 const DigitalTwinPage = lazy(() => import("./pages/DigitalTwinPage"));
@@ -240,10 +243,7 @@ function AppShell() {
                         path="/shop/orders"
                         element={
                           <RequireRole role="CUSTOMER">
-                            <MerchantComingSoon
-                              title="My Orders & Cart"
-                              description="Your cart, order history and delivery tracking will appear here in Phase 6."
-                            />
+                            <MyOrdersPage />
                           </RequireRole>
                         }
                       />
@@ -251,10 +251,7 @@ function AppShell() {
                         path="/shop/profile"
                         element={
                           <RequireRole role="CUSTOMER">
-                            <MerchantComingSoon
-                              title="Your Profile"
-                              description="Manage your name, address and preferences. Arriving soon."
-                            />
+                            <CustomerProfilePage />
                           </RequireRole>
                         }
                       />
@@ -265,6 +262,12 @@ function AppShell() {
                       <Route path="/what-if-simulation" element={<WhatIfSimulationPage />} />
                       <Route path="/agronomy-rag" element={<AgronomyRAGPage />} />
                       <Route path="/field-mapping" element={<FieldMappingPage />} />
+
+                      {/* Phase 7: farmer lists produce for the marketplace */}
+                      <Route
+                        path="/sell"
+                        element={<SellOnMarketplacePage />}
+                      />
 
                       {/* Pillar 2: Post-Harvest & Market */}
                       <Route path="/inventory" element={<InventoryPage />} />
