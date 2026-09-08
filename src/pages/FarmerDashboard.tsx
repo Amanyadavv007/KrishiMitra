@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Camera, Plus, ArrowRight, Package, TrendingUp, ShoppingCart, MapPin, Truck, LogIn } from "lucide-react";
+import { Camera, Plus, ArrowRight, Package, TrendingUp, ShoppingCart, MapPin, Truck, LogIn, Store } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useLocation as useGeoLocation } from "../contexts/LocationContext";
 import { useLanguage } from "../contexts/LanguageContext";
@@ -101,8 +101,8 @@ export default function FarmerDashboard() {
               <Plus className="w-4 h-4" />
               <span>{t("postIssue")}</span>
             </Link>
-            <Link to="/marketplace" className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-semibold text-sm shadow-sm">
-              <ShoppingCart className="w-4 h-4" />
+            <Link to="/sell" className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-semibold text-sm shadow-sm">
+              <Store className="w-4 h-4" />
               <span>{t("sellProduce")}</span>
             </Link>
           </div>
@@ -170,7 +170,12 @@ export default function FarmerDashboard() {
                 <Truck className="w-4 h-4 text-blue-600" />
                 <h2 className="text-sm font-bold text-slate-900">{t("pendingOrders")}</h2>
               </div>
-              <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold">{user ? pendingCount : 0} {t("newOrders")}</span>
+              <div className="flex items-center gap-2">
+                {user && (
+                  <Link to="/farmer-orders" className="text-[10px] font-semibold text-emerald-600 hover:underline">Customer orders →</Link>
+                )}
+                <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold">{user ? pendingCount : 0} {t("newOrders")}</span>
+              </div>
             </div>
             {!user ? (
               <div className="text-center py-6">

@@ -85,10 +85,10 @@ export default function RoleSelectModal({ open, onSelect }: RoleSelectModalProps
           </button>
 
           <button
-            onClick={() => choose("/customer")}
-            className="group w-full flex items-center gap-4 p-4 rounded-xl border-2 border-slate-200 bg-white hover:border-fuchsia-400 hover:bg-fuchsia-50/50 transition-all cursor-pointer text-left"
+            onClick={() => choose("/login?as=customer")}
+            className="group w-full flex items-center gap-4 p-4 rounded-xl border-2 border-slate-200 bg-white hover:border-amber-400 hover:bg-amber-50/50 transition-all cursor-pointer text-left"
           >
-            <span className="w-12 h-12 rounded-xl bg-fuchsia-100 text-fuchsia-600 flex items-center justify-center shrink-0 group-hover:bg-fuchsia-500 group-hover:text-white transition-colors">
+            <span className="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0 group-hover:bg-amber-500 group-hover:text-white transition-colors">
               <ShoppingBag className="w-6 h-6" />
             </span>
             <span className="min-w-0">
@@ -96,7 +96,7 @@ export default function RoleSelectModal({ open, onSelect }: RoleSelectModalProps
                 CUSTOMER
               </span>
               <span className="block text-xs text-slate-500 mt-0.5">
-                Pre-order fresh produce pooled at your nearest collection point
+                Buy fresh produce directly from local farmers
               </span>
             </span>
           </button>

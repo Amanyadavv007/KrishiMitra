@@ -4,8 +4,9 @@ import { Sprout, AlertCircle, MapPin, Navigation, Loader2, CheckCircle, Store, S
 import { useAuth } from "../contexts/AuthContext";
 
 export default function RegisterPage() {
-  const asMerchant = new URLSearchParams(window.location.search).get("as") === "merchant";
-  const asCustomer = new URLSearchParams(window.location.search).get("as") === "customer";
+  const asParam = new URLSearchParams(window.location.search).get("as");
+  const asMerchant = asParam === "merchant";
+  const asCustomer = asParam === "customer";
   const [name, setName] = useState("");
   const [shopName, setShopName] = useState("");
   const [shopCategory, setShopCategory] = useState("");
@@ -81,15 +82,13 @@ export default function RegisterPage() {
         state: state.trim(),
         district: district.trim(),
         pincode: pincode.trim(),
-        // Customer dashboard is open (showcase mode) — register a normal account and land on /customer.
-        // Avoids the farmers.role CHECK constraint until migration 008 is applied to the live DB.
-        role: asMerchant ? "DEALER" : "FARMER",
+        role: asMerchant ? "DEALER" : asCustomer ? "CUSTOMER" : "FARMER",
         shopName: asMerchant ? shopName.trim() : undefined,
         shopCategory: asMerchant ? shopCategory : undefined,
       });
 
       if (result.success) {
-        navigate(asCustomer ? "/customer" : asMerchant ? "/merchant" : "/dashboard");
+        navigate(asMerchant ? "/merchant" : asCustomer ? "/shop" : "/dashboard");
       } else {
         setError(result.error || "Registration failed");
       }
@@ -114,11 +113,13 @@ export default function RegisterPage() {
                 ? "bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-200"
                 : asMerchant
                 ? "bg-violet-50 text-violet-700 border border-violet-200"
-                : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                : asCustomer
+                  ? "bg-amber-50 text-amber-700 border border-amber-200"
+                  : "bg-emerald-50 text-emerald-700 border border-emerald-200"
             }`}
           >
-            {asCustomer ? <ShoppingBag className="w-3 h-3" /> : asMerchant ? <Store className="w-3 h-3" /> : <Sprout className="w-3 h-3" />}
-            {asCustomer ? "REGISTERING AS CUSTOMER" : asMerchant ? "REGISTERING AS MERCHANT" : "REGISTERING AS FARMER"}
+            {asMerchant ? <Store className="w-3 h-3" /> : asCustomer ? <ShoppingBag className="w-3 h-3" /> : <Sprout className="w-3 h-3" />}
+            {asMerchant ? "REGISTERING AS MERCHANT" : asCustomer ? "REGISTERING AS CUSTOMER" : "REGISTERING AS FARMER"}
           </span>
         </div>
 

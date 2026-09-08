@@ -31,11 +31,7 @@ export default function RequireRole({ role, children }: RequireRoleProps) {
   }
 
   if (user.role !== role && user.role !== "ADMIN") {
-    const home =
-      user.role === "DEALER" ? "/merchant"
-      : user.role === "CUSTOMER" ? "/customer"
-      : "/dashboard";
-    return <Navigate to={home} replace />;
+    return <Navigate to={user.role === "DEALER" ? "/merchant" : user.role === "CUSTOMER" ? "/shop" : "/dashboard"} replace />;
   }
 
   return <>{children}</>;

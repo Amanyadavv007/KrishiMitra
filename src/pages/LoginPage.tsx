@@ -12,8 +12,9 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const params = new URLSearchParams(window.location.search);
   const returnTo = params.get("returnTo") || "/dashboard";
-  const asMerchant = params.get("as") === "merchant";
-  const asCustomer = params.get("as") === "customer";
+  const asParam = params.get("as");
+  const asMerchant = asParam === "merchant";
+  const asCustomer = asParam === "customer";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,13 +34,11 @@ export default function LoginPage() {
       const result = await login(fullPhone, pin);
       if (result.success) {
         // Account role decides the destination (source of truth is the DB)
-        const isDealer = result.user?.role === "DEALER";
-        const isCustomer = result.user?.role === "CUSTOMER";
-        const dest =
-          isDealer && returnTo === "/dashboard" ? "/merchant"
-          : isCustomer && returnTo === "/dashboard" ? "/customer"
-          : returnTo;
-        navigate(dest);
+        const role = result.user?.role;
+        const isDealer = role === "DEALER";
+        const isCustomer = role === "CUSTOMER";
+        const fallback = isDealer ? "/merchant" : isCustomer ? "/shop" : "/dashboard";
+        navigate(returnTo === "/dashboard" ? fallback : returnTo);
       } else {
         setError(result.error || "Login failed. Please try again.");
       }
@@ -64,11 +63,13 @@ export default function LoginPage() {
                 ? "bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-200"
                 : asMerchant
                 ? "bg-violet-50 text-violet-700 border border-violet-200"
-                : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                : asCustomer
+                  ? "bg-amber-50 text-amber-700 border border-amber-200"
+                  : "bg-emerald-50 text-emerald-700 border border-emerald-200"
             }`}
           >
-            {asCustomer ? <ShoppingBag className="w-3 h-3" /> : asMerchant ? <Store className="w-3 h-3" /> : <Sprout className="w-3 h-3" />}
-            {asCustomer ? "CUSTOMER PORTAL" : asMerchant ? "MERCHANT PORTAL" : "FARMER PORTAL"}
+            {asMerchant ? <Store className="w-3 h-3" /> : asCustomer ? <ShoppingBag className="w-3 h-3" /> : <Sprout className="w-3 h-3" />}
+            {asMerchant ? "MERCHANT PORTAL" : asCustomer ? "CUSTOMER PORTAL" : "FARMER PORTAL"}
           </span>
         </div>
 
@@ -132,9 +133,9 @@ export default function LoginPage() {
 
         <div className="text-center pt-3 border-t border-slate-100">
           <p className="text-xs text-slate-500">
-            {asCustomer ? "Naya customer hai?" : asMerchant ? "Naya merchant hai?" : "Naya kisan hai?"}{" "}
+            {asMerchant ? "Naya merchant hai?" : asCustomer ? "Naya customer hai?" : "Naya kisan hai?"}{" "}
             <Link
-              to={asCustomer ? "/register?as=customer" : asMerchant ? "/register?as=merchant" : "/register"}
+              to={asMerchant ? "/register?as=merchant" : asCustomer ? "/register?as=customer" : "/register"}
               className="text-emerald-600 font-semibold hover:underline"
             >
               Register as new user
