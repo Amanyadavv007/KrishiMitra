@@ -42,9 +42,12 @@ const MerchantSearchPage = lazy(() => import("./pages/MerchantSearchPage"));
 const MerchantDashboardPage = lazy(() => import("./pages/MerchantDashboardPage"));
 const MerchantComingSoon = lazy(() => import("./pages/MerchantComingSoon"));
 
-// Customer World (Phase 2)
+// Customer World (Phases 2–4)
 const CustomerLandingPage = lazy(() => import("./pages/CustomerLandingPage"));
 const MarketplaceCustomerPage = lazy(() => import("./pages/MarketplaceCustomerPage"));
+const FarmerConnectPage = lazy(() => import("./pages/FarmerConnectPage"));
+const FarmerStorefrontPage = lazy(() => import("./pages/FarmerStorefrontPage"));
+const CustomerChatPage = lazy(() => import("./pages/CustomerChatPage"));
 
 // 5 New Advanced Agricultural Intelligence Pages
 const DigitalTwinPage = lazy(() => import("./pages/DigitalTwinPage"));
@@ -213,10 +216,23 @@ function AppShell() {
                         path="/shop/farmers"
                         element={
                           <RequireRole role="CUSTOMER">
-                            <MerchantComingSoon
-                              title="Farmer Connect"
-                              description="Browse nearby farmer storefronts, see their products and ratings, and chat with them directly. Arriving in Phase 3."
-                            />
+                            <FarmerConnectPage />
+                          </RequireRole>
+                        }
+                      />
+                      <Route
+                        path="/shop/farmers/:id"
+                        element={
+                          <RequireRole role="CUSTOMER">
+                            <FarmerStorefrontPage />
+                          </RequireRole>
+                        }
+                      />
+                      <Route
+                        path="/shop/chat/:farmerId"
+                        element={
+                          <RequireRole role="CUSTOMER">
+                            <CustomerChatPage />
                           </RequireRole>
                         }
                       />

@@ -29,6 +29,7 @@ export default function MarketplacePage() {
   const [typeFilter, setTypeFilter] = useState<ProductType | "all">("all");
   const [minRating, setMinRating] = useState(0);
   const [maxDistance, setMaxDistance] = useState(50);
+  const [maxPrice, setMaxPrice] = useState(0);
   const [addedId, setAddedId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -47,11 +48,12 @@ export default function MarketplacePage() {
       searchMarketplace(products, {
         query,
         maxDistanceKm: maxDistance,
+        maxPrice: maxPrice > 0 ? maxPrice : undefined,
         minRating: minRating > 0 ? minRating : undefined,
         productType: typeFilter,
         inStockOnly: true,
       }),
-    [products, query, maxDistance, minRating, typeFilter]
+    [products, query, maxDistance, minRating, maxPrice, typeFilter]
   );
 
   const handleAdd = (p: MarketProduct, packKg: number) => {
@@ -111,6 +113,17 @@ export default function MarketplacePage() {
               <option value={4.5}>⭐ 4.5+</option>
             </select>
             <select
+              value={maxPrice}
+              onChange={(e) => setMaxPrice(Number(e.target.value))}
+              className="px-3 py-1.5 rounded-full border border-slate-200 bg-white font-semibold cursor-pointer"
+            >
+              <option value={0}>Any price</option>
+              <option value={20}>Under ₹20</option>
+              <option value={50}>Under ₹50</option>
+              <option value={100}>Under ₹100</option>
+              <option value={250}>Under ₹250</option>
+            </select>
+            <select
               value={maxDistance}
               onChange={(e) => setMaxDistance(Number(e.target.value))}
               className="px-3 py-1.5 rounded-full border border-slate-200 bg-white font-semibold cursor-pointer"
@@ -163,7 +176,7 @@ export default function MarketplacePage() {
                     </div>
                   </div>
                   <button
-                    onClick={() => navigate("/shop/farmers")}
+                    onClick={() => navigate(`/shop/farmers/${encodeURIComponent(r.listing.id)}`)}
                     className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 cursor-pointer whitespace-nowrap"
                   >
                     View Storefront →
