@@ -51,6 +51,7 @@ const CustomerChatPage = lazy(() => import("./pages/CustomerChatPage"));
 const MyOrdersPage = lazy(() => import("./pages/MyOrdersPage"));
 const CustomerProfilePage = lazy(() => import("./pages/CustomerProfilePage"));
 const SellOnMarketplacePage = lazy(() => import("./pages/SellOnMarketplacePage"));
+const FarmerOrdersPage = lazy(() => import("./pages/FarmerOrdersPage"));
 
 // 5 New Advanced Agricultural Intelligence Pages
 const DigitalTwinPage = lazy(() => import("./pages/DigitalTwinPage"));
@@ -267,6 +268,11 @@ function AppShell() {
                       <Route
                         path="/sell"
                         element={<SellOnMarketplacePage />}
+                      />
+                      {/* Farmer's incoming customer orders (Phase 6 loop) */}
+                      <Route
+                        path="/farmer-orders"
+                        element={<FarmerOrdersPage />}
                       />
 
                       {/* Pillar 2: Post-Harvest & Market */}
