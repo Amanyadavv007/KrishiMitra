@@ -68,6 +68,9 @@ export default function Navbar() {
                     <Link to="/supply-chain" onClick={() => setMarketOpen(false)} className="block px-3 py-2.5 rounded-xl hover:bg-violet-50 text-xs font-semibold text-slate-800 transition-colors">
                       {t("maalKhed")}
                     </Link>
+                    <Link to="/customer" onClick={() => setMarketOpen(false)} className="block px-3 py-2.5 rounded-xl hover:bg-fuchsia-50 text-xs font-semibold text-slate-800 transition-colors">
+                      {t("customerBazaar")}
+                    </Link>
                     <Link to="/products" onClick={() => setMarketOpen(false)} className="block px-3 py-2.5 rounded-xl hover:bg-amber-50 text-xs font-semibold text-slate-800 transition-colors">
                       {t("store")}
                     </Link>
