@@ -233,6 +233,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
 
           if (error) {
+            // Friendly hint when the DB hasn't allowed the CUSTOMER role yet
+            if (/role_check|check constraint/i.test(error.message || "")) {
+              return {
+                success: false,
+                error:
+                  "Customer accounts are not enabled in the database yet. Run supabase/migrations/007_customer_role.sql in your Supabase SQL Editor (takes 10 seconds), then try again.",
+              };
+            }
             return { success: false, error: `Registration failed: ${error.message}` };
           }
 
