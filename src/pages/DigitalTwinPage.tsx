@@ -370,7 +370,14 @@ export default function DigitalTwinPage() {
                 <div className="w-full bg-slate-100 h-1.5 rounded-full mt-2.5 overflow-hidden">
                   <div className={`h-full rounded-full ${c.score >= 80 ? "bg-emerald-500" : c.score >= 65 ? "bg-amber-500" : "bg-slate-400"}`} style={{ width: `${c.score}%` }} />
                 </div>
-                <p className="text-[11px] text-slate-500 mt-2">{c.reason}</p>
+                <div className="flex flex-wrap gap-1 mt-2.5">
+                  {c.factors.map((f, fi) => (
+                    <span key={fi} className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${f.ok ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+                      {f.ok ? "✓" : "✗"} {f.label}
+                    </span>
+                  ))}
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1.5">Why: {c.reason}</p>
               </div>
             ))}
           </div>

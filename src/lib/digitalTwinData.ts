@@ -18,11 +18,17 @@ export interface TwinAdvisory {
   severity: "good" | "caution" | "alert";
 }
 
+export interface CropFactor {
+  label: string;
+  ok: boolean;
+}
+
 export interface CropFit {
   name: string;
   emoji: string;
   score: number; // 0-100
   reason: string;
+  factors: CropFactor[]; // per-factor breakdown for the card's "why" chips
 }
 
 export interface TwinProjectionPoint {
@@ -134,7 +140,8 @@ export function scoreCrops(ph: number, avgMoisture: number, season: "kharif" | "
     let score = 60;
     const reasons: string[] = [];
 
-    if (ph >= c.pHmin && ph <= c.pHmax) {
+    const pHok = ph >= c.pHmin && ph <= c.pHmax;
+    if (pHok) {
       score += 15;
       reasons.push("pH suits it");
     } else {
@@ -150,14 +157,24 @@ export function scoreCrops(ph: number, avgMoisture: number, season: "kharif" | "
       reasons.push(c.water === "high" ? "needs more water than soil holds" : "moderate irrigation needed");
     }
 
-    if (c.season === season || c.season === "both") { score += 10; reasons.push("in-season now"); }
+    const inSeason = c.season === season || c.season === "both";
+    if (inSeason) { score += 10; reasons.push("in-season now"); }
     else score -= 15;
+
+    // Per-factor "why" chips — same conditions as the score math above, nothing new
+    const pHdist = ph < c.pHmin ? c.pHmin - ph : ph - c.pHmax;
+    const factors: CropFactor[] = [
+      { label: pHok ? "pH fits" : pHdist > 0.8 ? "pH out of range" : "pH slightly off", ok: pHok },
+      { label: waterFit ? (c.water === "low" ? "low water need fits" : "moisture fits") : c.water === "high" ? "needs more water" : "needs some irrigation", ok: waterFit },
+      { label: inSeason ? "in season now" : `off-season (better in ${c.season === "kharif" ? "Kharif" : "Rabi"})`, ok: inSeason },
+    ];
 
     return {
       name: c.name,
       emoji: c.emoji,
       score: Math.max(10, Math.min(98, Math.round(score))),
       reason: reasons.join(" • "),
+      factors,
     };
   })
     .sort((a, b) => b.score - a.score)
@@ -263,12 +280,18 @@ function buildAdvisories(input: {
   const gapP = soil.p < 30 ? "single super phosphate ~25 kg/acre" : null;
   const gapK = soil.k < 25 ? "muriate of potash ~15 kg/acre" : null;
   const gaps = [gapN, gapP, gapK].filter(Boolean) as string[];
+  // Where to actually get inputs/tests — makes the advisory actionable, not just informational
+  const kvkTip = gaps.length
+    ? `Your nearest Krishi Vigyan Kendra (KVK) can confirm the right dose for your plot and often stocks or sources quality inputs — find yours at kvk.icar.gov.in or ask at the block agriculture office.`
+    : `Book a free Soil Health Card test at your nearest Krishi Vigyan Kendra (KVK) or block agriculture office — find yours at kvk.icar.gov.in.`;
   advisories.push({
     type: "fertilizer",
-    title: gaps.length ? `${gaps.length} nutrient gap${gaps.length > 1 ? "s" : ""} in ${stateName} soils` : `Soil nutrients look balanced for ${stateName}`,
+    title: gaps.length
+      ? `State data suggests ${gaps.length} nutrient gap${gaps.length > 1 ? "s" : ""} — confirm with a lab test`
+      : `${stateName} soils usually test adequate — confirm for your plot`,
     body: gaps.length
-      ? `State soil data shows low ${gaps.join(", ")}. Apply before the next rain so nutrients wash into the root zone, and always verify with a Soil Health Card lab test.`
-      : `State-level N-P-K values (N:${soil.n} P:${soil.p} K:${soil.k}) are adequate for this season's crop. Confirm with a Soil Health Card lab test for field-precise values.`,
+      ? `State-average N-P-K (N:${soil.n} P:${soil.p} K:${soil.k} kg/ha; typical adequate range ≈ N 90–150, P 30–50, K 25–40) falls short for ${gaps.length} nutrient${gaps.length > 1 ? "s" : ""}, suggesting ${gaps.join(", ")} — your plot may differ. ${kvkTip}`
+      : `State-average N-P-K (N:${soil.n} P:${soil.p} K:${soil.k} kg/ha; typical adequate range ≈ N 90–150, P 30–50, K 25–40) is in the healthy band — but this is a state-level estimate, not a measurement of your plot. ${kvkTip}`,
     severity: gaps.length ? "caution" : "good",
   });
 
@@ -278,11 +301,11 @@ function buildAdvisories(input: {
   let pestTitle = "Low pest pressure expected";
   if (humidity > 80 && airTemp >= 20 && airTemp <= 30) {
     pestTitle = "High humidity — fungal disease risk";
-    pestBody = `${humidity}% humidity at ${Math.round(airTemp)}°C favors fungal diseases (blight, rust, blast). If rain is forecast, spray a preventive bio-fungicide (Trichoderma) before the rain, not after.`;
+    pestBody = `${humidity}% humidity at ${Math.round(airTemp)}°C favors fungal diseases (blight, rust, blast). Spray a preventive bio-fungicide (Trichoderma viride 5g/L) before the next rain, not after. Trichoderma and neem oil are stocked at your nearest KVK agro-vet counter or any verified agri-dealer — ask for the CIBRC-registered brand.`;
     pestSev = "alert";
   } else if (airTemp > 35 && humidity < 50) {
     pestTitle = "Hot dry spell — sucking pest risk";
-    pestBody = "Heat stress attracts aphids, whitefly and thrips. Check leaf undersides in the morning and consider neem oil spray at 5ml/L.";
+    pestBody = "Heat stress attracts aphids, whitefly and thrips. Check leaf undersides in the morning and spray neem oil at 5ml/L (evening, to avoid leaf burn) — neem oil is cheaply available at KVK counters and local agri-input shops.";
     pestSev = "caution";
   }
   advisories.push({ type: "pest", title: pestTitle, body: pestBody, severity: pestSev });
