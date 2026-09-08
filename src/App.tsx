@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import { LocationProvider } from "./contexts/LocationContext";
 import { SocketProvider } from "./contexts/SocketContext";
+import { CartProvider } from "./contexts/CartContext";
 
 import Navbar from "./components/layout/Navbar";
 import Footer from "./components/layout/Footer";
@@ -12,6 +13,7 @@ import MobileNav from "./components/layout/MobileNav";
 import LanguageOnboardingModal from "./components/common/LanguageOnboardingModal";
 import RoleSelectModal from "./components/common/RoleSelectModal";
 import MerchantNavbar from "./components/merchant/MerchantNavbar";
+import CustomerNavbar from "./components/customer/CustomerNavbar";
 import RequireRole from "./components/auth/RequireRole";
 
 // Landing page loads eagerly (first paint), everything else is code-split
@@ -39,6 +41,10 @@ const MerchantLandingPage = lazy(() => import("./pages/MerchantLandingPage"));
 const MerchantSearchPage = lazy(() => import("./pages/MerchantSearchPage"));
 const MerchantDashboardPage = lazy(() => import("./pages/MerchantDashboardPage"));
 const MerchantComingSoon = lazy(() => import("./pages/MerchantComingSoon"));
+
+// Customer World (Phase 2)
+const CustomerLandingPage = lazy(() => import("./pages/CustomerLandingPage"));
+const MarketplaceCustomerPage = lazy(() => import("./pages/MarketplaceCustomerPage"));
 
 // 5 New Advanced Agricultural Intelligence Pages
 const DigitalTwinPage = lazy(() => import("./pages/DigitalTwinPage"));
@@ -79,6 +85,7 @@ function usePreloadCoreRoutes() {
       void import("./pages/WeatherPage");
       void import("./pages/MandiPricePage");
       void import("./pages/MerchantLandingPage");
+      void import("./pages/CustomerLandingPage");
     }, 2500);
     return () => window.clearTimeout(timer);
   }, []);
@@ -88,7 +95,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppShell />
+        <CartProvider>
+          <AppShell />
+        </CartProvider>
       </AuthProvider>
     </BrowserRouter>
   );
@@ -97,8 +106,10 @@ export default function App() {
 function AppShell() {
   const { user } = useAuth();
   const routerLocation = useRouterLocation();
-  // Merchant area uses its own navbar; the farmer navbar/mobile nav is hidden there.
+  // Merchant and customer areas use their own navbars; the farmer
+  // navbar/mobile nav is hidden there.
   const isMerchantArea = routerLocation.pathname.startsWith("/merchant");
+  const isCustomerArea = routerLocation.pathname.startsWith("/shop");
   // Popups show on every visit while logged out (no persistence); once logged in, never again.
   const [langSelected, setLangSelected] = useState(false);
   const [roleSelected, setRoleSelected] = useState(false);
@@ -118,8 +129,9 @@ function AppShell() {
                   onboardingOpen ? "blur-onboarding" : ""
                 }`}
               >
-                {!isMerchantArea && <Navbar />}
+                {!isMerchantArea && !isCustomerArea && <Navbar />}
                 {isMerchantArea && <MerchantNavbar />}
+                {isCustomerArea && <CustomerNavbar />}
                 <main className="flex-1">
                   <Suspense fallback={<PageLoader />}>
                     <Routes>
@@ -180,6 +192,57 @@ function AppShell() {
                         }
                       />
 
+                      {/* Customer World (role-guarded) — Phase 2 */}
+                      <Route
+                        path="/shop"
+                        element={
+                          <RequireRole role="CUSTOMER">
+                            <CustomerLandingPage />
+                          </RequireRole>
+                        }
+                      />
+                      <Route
+                        path="/shop/marketplace"
+                        element={
+                          <RequireRole role="CUSTOMER">
+                            <MarketplaceCustomerPage />
+                          </RequireRole>
+                        }
+                      />
+                      <Route
+                        path="/shop/farmers"
+                        element={
+                          <RequireRole role="CUSTOMER">
+                            <MerchantComingSoon
+                              title="Farmer Connect"
+                              description="Browse nearby farmer storefronts, see their products and ratings, and chat with them directly. Arriving in Phase 3."
+                            />
+                          </RequireRole>
+                        }
+                      />
+                      <Route
+                        path="/shop/orders"
+                        element={
+                          <RequireRole role="CUSTOMER">
+                            <MerchantComingSoon
+                              title="My Orders & Cart"
+                              description="Your cart, order history and delivery tracking will appear here in Phase 6."
+                            />
+                          </RequireRole>
+                        }
+                      />
+                      <Route
+                        path="/shop/profile"
+                        element={
+                          <RequireRole role="CUSTOMER">
+                            <MerchantComingSoon
+                              title="Your Profile"
+                              description="Manage your name, address and preferences. Arriving soon."
+                            />
+                          </RequireRole>
+                        }
+                      />
+
                       {/* 5 Advanced AI Engines */}
                       <Route path="/digital-twin" element={<DigitalTwinPage />} />
                       <Route path="/consensus-engine" element={<ConsensusEnginePage />} />
@@ -195,7 +258,7 @@ function AppShell() {
                     </Routes>
                   </Suspense>
                 </main>                <Footer />
-                {!isMerchantArea && <MobileNav />}
+                {!isMerchantArea && !isCustomerArea && <MobileNav />}
               </div>
               <LanguageOnboardingModal
                 open={showLangModal}

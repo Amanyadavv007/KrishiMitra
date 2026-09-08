@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Sprout, AlertCircle, MapPin, Navigation, Loader2, CheckCircle, Store } from "lucide-react";
+import { Sprout, AlertCircle, MapPin, Navigation, Loader2, CheckCircle, Store, ShoppingBag } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function RegisterPage() {
-  const asMerchant = new URLSearchParams(window.location.search).get("as") === "merchant";
+  const asParam = new URLSearchParams(window.location.search).get("as");
+  const asMerchant = asParam === "merchant";
+  const asCustomer = asParam === "customer";
   const [name, setName] = useState("");
   const [shopName, setShopName] = useState("");
   const [shopCategory, setShopCategory] = useState("");
@@ -80,13 +82,13 @@ export default function RegisterPage() {
         state: state.trim(),
         district: district.trim(),
         pincode: pincode.trim(),
-        role: asMerchant ? "DEALER" : "FARMER",
+        role: asMerchant ? "DEALER" : asCustomer ? "CUSTOMER" : "FARMER",
         shopName: asMerchant ? shopName.trim() : undefined,
         shopCategory: asMerchant ? shopCategory : undefined,
       });
 
       if (result.success) {
-        navigate(asMerchant ? "/merchant" : "/dashboard");
+        navigate(asMerchant ? "/merchant" : asCustomer ? "/shop" : "/dashboard");
       } else {
         setError(result.error || "Registration failed");
       }
@@ -109,11 +111,13 @@ export default function RegisterPage() {
             className={`inline-flex items-center gap-1.5 mt-2.5 px-3 py-1 rounded-full text-[10px] font-bold tracking-wide ${
               asMerchant
                 ? "bg-violet-50 text-violet-700 border border-violet-200"
-                : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                : asCustomer
+                  ? "bg-amber-50 text-amber-700 border border-amber-200"
+                  : "bg-emerald-50 text-emerald-700 border border-emerald-200"
             }`}
           >
-            {asMerchant ? <Store className="w-3 h-3" /> : <Sprout className="w-3 h-3" />}
-            {asMerchant ? "REGISTERING AS MERCHANT" : "REGISTERING AS FARMER"}
+            {asMerchant ? <Store className="w-3 h-3" /> : asCustomer ? <ShoppingBag className="w-3 h-3" /> : <Sprout className="w-3 h-3" />}
+            {asMerchant ? "REGISTERING AS MERCHANT" : asCustomer ? "REGISTERING AS CUSTOMER" : "REGISTERING AS FARMER"}
           </span>
         </div>
 

@@ -3,7 +3,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 
 interface RequireRoleProps {
-  role: "FARMER" | "DEALER" | "ADMIN";
+  role: "FARMER" | "DEALER" | "ADMIN" | "CUSTOMER";
   children: React.ReactNode;
 }
 
@@ -25,13 +25,13 @@ export default function RequireRole({ role, children }: RequireRoleProps) {
   }
 
   if (!user) {
-    const as = role === "DEALER" ? "merchant" : "farmer";
+    const as = role === "DEALER" ? "merchant" : role === "CUSTOMER" ? "customer" : "farmer";
     const returnTo = encodeURIComponent(location.pathname + location.search);
     return <Navigate to={`/login?as=${as}&returnTo=${returnTo}`} replace />;
   }
 
   if (user.role !== role && user.role !== "ADMIN") {
-    return <Navigate to={user.role === "DEALER" ? "/merchant" : "/dashboard"} replace />;
+    return <Navigate to={user.role === "DEALER" ? "/merchant" : user.role === "CUSTOMER" ? "/shop" : "/dashboard"} replace />;
   }
 
   return <>{children}</>;

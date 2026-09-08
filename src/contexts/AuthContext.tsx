@@ -12,7 +12,7 @@ export interface User {
   pincode: string;
   village: string;
   address: string;
-  role: "FARMER" | "DEALER" | "ADMIN";
+  role: "FARMER" | "DEALER" | "ADMIN" | "CUSTOMER";
   shopName?: string;
   shopCategory?: string;
   createdAt: string;
@@ -28,7 +28,7 @@ export interface RegisterInput {
   district: string;
   pincode: string;
   address: string;
-  role: "FARMER" | "DEALER" | "ADMIN";
+  role: "FARMER" | "DEALER" | "ADMIN" | "CUSTOMER";
   shopName?: string;
   shopCategory?: string;
 }
@@ -262,7 +262,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           pincode: data.pincode || "",
           village: data.village || "",
           address: data.address || "",
-          role: "FARMER",
+          role: data.role || "FARMER",
           createdAt: new Date().toISOString(),
           pinHash,
         };
