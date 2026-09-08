@@ -273,7 +273,7 @@ export default function CustomerDashboard() {
               Pre-order seasonal produce pooled at your nearest collection point. Login to browse stock and place orders.
             </p>
           </div>
-          <a href="/login?returnTo=/customer" className="block w-full py-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-semibold text-sm shadow-md text-center">
+          <a href="/login?as=customer&returnTo=/customer" className="block w-full py-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-semibold text-sm shadow-md text-center">
             Login to Continue
           </a>
         </div>

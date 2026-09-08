@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Sprout, Store, Users } from "lucide-react";
+import { Sprout, Store, Users, ShoppingBag } from "lucide-react";
 
 interface RoleSelectModalProps {
   open: boolean;
@@ -80,6 +80,23 @@ export default function RoleSelectModal({ open, onSelect }: RoleSelectModalProps
               </span>
               <span className="block text-xs text-slate-500 mt-0.5">
                 Buy produce, manage your shop &amp; connect with farmers
+              </span>
+            </span>
+          </button>
+
+          <button
+            onClick={() => choose("/login?as=customer")}
+            className="group w-full flex items-center gap-4 p-4 rounded-xl border-2 border-slate-200 bg-white hover:border-fuchsia-400 hover:bg-fuchsia-50/50 transition-all cursor-pointer text-left"
+          >
+            <span className="w-12 h-12 rounded-xl bg-fuchsia-100 text-fuchsia-600 flex items-center justify-center shrink-0 group-hover:bg-fuchsia-500 group-hover:text-white transition-colors">
+              <ShoppingBag className="w-6 h-6" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-base font-bold text-slate-900 tracking-wide">
+                CUSTOMER
+              </span>
+              <span className="block text-xs text-slate-500 mt-0.5">
+                Pre-order fresh produce pooled at your nearest collection point
               </span>
             </span>
           </button>

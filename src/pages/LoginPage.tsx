@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Sprout, AlertCircle, Phone, KeyRound, ArrowLeft, CheckCircle, Store } from "lucide-react";
+import { Sprout, AlertCircle, Phone, KeyRound, ArrowLeft, CheckCircle, Store, ShoppingBag } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function LoginPage() {
@@ -13,6 +13,7 @@ export default function LoginPage() {
   const params = new URLSearchParams(window.location.search);
   const returnTo = params.get("returnTo") || "/dashboard";
   const asMerchant = params.get("as") === "merchant";
+  const asCustomer = params.get("as") === "customer";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +34,12 @@ export default function LoginPage() {
       if (result.success) {
         // Account role decides the destination (source of truth is the DB)
         const isDealer = result.user?.role === "DEALER";
-        navigate(isDealer && returnTo === "/dashboard" ? "/merchant" : returnTo);
+        const isCustomer = result.user?.role === "CUSTOMER";
+        const dest =
+          isDealer && returnTo === "/dashboard" ? "/merchant"
+          : isCustomer && returnTo === "/dashboard" ? "/customer"
+          : returnTo;
+        navigate(dest);
       } else {
         setError(result.error || "Login failed. Please try again.");
       }
@@ -54,13 +60,15 @@ export default function LoginPage() {
           <p className="text-xs text-slate-500 mt-1">Smart Kheti Sahayak</p>
           <span
             className={`inline-flex items-center gap-1.5 mt-2.5 px-3 py-1 rounded-full text-[10px] font-bold tracking-wide ${
-              asMerchant
+              asCustomer
+                ? "bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-200"
+                : asMerchant
                 ? "bg-violet-50 text-violet-700 border border-violet-200"
                 : "bg-emerald-50 text-emerald-700 border border-emerald-200"
             }`}
           >
-            {asMerchant ? <Store className="w-3 h-3" /> : <Sprout className="w-3 h-3" />}
-            {asMerchant ? "MERCHANT PORTAL" : "FARMER PORTAL"}
+            {asCustomer ? <ShoppingBag className="w-3 h-3" /> : asMerchant ? <Store className="w-3 h-3" /> : <Sprout className="w-3 h-3" />}
+            {asCustomer ? "CUSTOMER PORTAL" : asMerchant ? "MERCHANT PORTAL" : "FARMER PORTAL"}
           </span>
         </div>
 
@@ -124,9 +132,9 @@ export default function LoginPage() {
 
         <div className="text-center pt-3 border-t border-slate-100">
           <p className="text-xs text-slate-500">
-            {asMerchant ? "Naya merchant hai?" : "Naya kisan hai?"}{" "}
+            {asCustomer ? "Naya customer hai?" : asMerchant ? "Naya merchant hai?" : "Naya kisan hai?"}{" "}
             <Link
-              to={asMerchant ? "/register?as=merchant" : "/register"}
+              to={asCustomer ? "/register?as=customer" : asMerchant ? "/register?as=merchant" : "/register"}
               className="text-emerald-600 font-semibold hover:underline"
             >
               Register as new user
