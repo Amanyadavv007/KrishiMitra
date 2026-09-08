@@ -81,7 +81,9 @@ export default function RegisterPage() {
         state: state.trim(),
         district: district.trim(),
         pincode: pincode.trim(),
-        role: asCustomer ? "CUSTOMER" : asMerchant ? "DEALER" : "FARMER",
+        // Customer dashboard is open (showcase mode) — register a normal account and land on /customer.
+        // Avoids the farmers.role CHECK constraint until migration 008 is applied to the live DB.
+        role: asMerchant ? "DEALER" : "FARMER",
         shopName: asMerchant ? shopName.trim() : undefined,
         shopCategory: asMerchant ? shopCategory : undefined,
       });

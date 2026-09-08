@@ -259,28 +259,8 @@ export default function CustomerDashboard() {
     { label: "Delivered · escrow released", done: o.status === "delivered" },
   ];
 
-  // ---- auth gate ---------------------------------------------
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-slate-50 py-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md mx-auto bg-white rounded-2xl border border-slate-200/80 shadow-sm p-8 text-center space-y-5">
-          <div className="w-16 h-16 rounded-2xl bg-violet-100 flex items-center justify-center mx-auto">
-            <Store className="w-8 h-8 text-violet-600" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-slate-900">Buy Fresh from Nearby Clusters</h1>
-            <p className="text-xs text-slate-500 mt-2">
-              Pre-order seasonal produce pooled at your nearest collection point. Login to browse stock and place orders.
-            </p>
-          </div>
-          <a href="/login?as=customer&returnTo=/customer" className="block w-full py-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-semibold text-sm shadow-md text-center">
-            Login to Continue
-          </a>
-        </div>
-      </div>
-    );
-  }
-
+  // Showcase mode: the customer dashboard is open to everyone —
+  // no login/register required so it can be demoed directly.
   return (
     <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-6">

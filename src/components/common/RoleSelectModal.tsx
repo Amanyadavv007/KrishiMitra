@@ -85,7 +85,7 @@ export default function RoleSelectModal({ open, onSelect }: RoleSelectModalProps
           </button>
 
           <button
-            onClick={() => choose("/login?as=customer")}
+            onClick={() => choose("/customer")}
             className="group w-full flex items-center gap-4 p-4 rounded-xl border-2 border-slate-200 bg-white hover:border-fuchsia-400 hover:bg-fuchsia-50/50 transition-all cursor-pointer text-left"
           >
             <span className="w-12 h-12 rounded-xl bg-fuchsia-100 text-fuchsia-600 flex items-center justify-center shrink-0 group-hover:bg-fuchsia-500 group-hover:text-white transition-colors">
