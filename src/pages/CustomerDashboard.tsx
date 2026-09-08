@@ -20,6 +20,9 @@ import {
   CustomerSubscriptionRow,
   FarmerContributionRow,
   referenceFor,
+  farmerPayoutPerKg,
+  farmerChipsFor,
+  extraFarmersCount,
   daysAheadStr,
 } from "../lib/collectionData";
 
@@ -75,6 +78,7 @@ export default function CustomerDashboard() {
   const [selectedPoint, setSelectedPoint] = useState<string>("all");
 
   // order flow
+  const [chipsOpen, setChipsOpen] = useState<string | null>(null);
   const [orderItem, setOrderItem] = useState<{ inv: CollectionPointInventoryRow; cp: CollectionPoint } | null>(null);
   const [orderQty, setOrderQty] = useState("");
   const [fulfilment, setFulfilment] = useState<"pickup" | "scheduled_slot">("pickup");
@@ -381,19 +385,66 @@ export default function CustomerDashboard() {
                         </div>
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${GRADE_COLORS[inv.grade]}`}>Grade {inv.grade}</span>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-base font-extrabold text-slate-900">₹{Number(inv.price_per_kg)}<span className="text-[10px] text-slate-400 font-medium">/kg</span></p>
-                          <p className="text-[10px] text-slate-400">{available.toLocaleString()} kg available</p>
+
+                      {/* Farmer chips — direct from farmers, not a warehouse */}
+                      <button
+                        onClick={() => setChipsOpen(chipsOpen === inv.id ? null : inv.id)}
+                        className="w-full flex items-center gap-2 group cursor-pointer"
+                        title="Farmers who contributed to this pool"
+                      >
+                        <div className="flex -space-x-1.5">
+                          {farmerChipsFor(contributions, cp.id, cp.contributingFarmerCount).map((chip) => (
+                            <span key={chip.name} className={`w-5 h-5 rounded-full ${chip.color} border-2 border-white flex items-center justify-center text-[8px] font-bold text-white`}>
+                              {chip.name.charAt(0)}
+                            </span>
+                          ))}
                         </div>
-                        <div className="text-right">
-                          <p className="text-[10px] text-slate-400">Mandi ≈ ₹{ref.mandi}/kg · Retail ≈ ₹{ref.retail}/kg</p>
-                          <p className="text-[9px] text-emerald-600 font-semibold">
-                            {Number(inv.price_per_kg) < ref.mandi ? "Cheaper than mandi" : Number(inv.price_per_kg) <= ref.retail ? "Fair vs retail" : "Premium"}
-                          </p>
+                        <span className="text-[10px] text-slate-500 group-hover:text-emerald-700 font-medium text-left">
+                          Contributed by: {farmerChipsFor(contributions, cp.id, cp.contributingFarmerCount).map((c) => c.name).join(", ")}
+                          {(() => { const x = extraFarmersCount(contributions, cp.id, cp.contributingFarmerCount); return x > 0 ? ` +${x} more` : ""; })()}
+                        </span>
+                      </button>
+                      {chipsOpen === inv.id && (
+                        <div className="flex flex-wrap gap-1.5 -mt-1">
+                          {Array.from(new Set(contributions.filter((c) => c.collection_point_id === cp.id).map((c) => c.farmer_name))).map((name) => (
+                            <span key={name} className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[9px] font-semibold text-emerald-800">👨‍🌾 {name}</span>
+                          ))}
                         </div>
+                      )}
+
+                      {/* Price ladder — the killer feature, front and centre */}
+                      <div className="rounded-xl bg-slate-50 border border-slate-100 p-3 space-y-2">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">Price ladder — where your ₹ goes</p>
+                        {([
+                          { label: "Mandi (wholesale)", value: ref.mandi, bar: "bg-slate-300", text: "text-slate-600" },
+                          { label: "City retail (middleman)", value: ref.retail, bar: "bg-amber-300", text: "text-slate-600" },
+                          { label: "You pay here", value: Number(inv.price_per_kg), bar: "bg-emerald-500", text: "text-emerald-700" },
+                        ]).map((row) => {
+                          const max = Math.max(ref.retail, Number(inv.price_per_kg), ref.mandi) || 1;
+                          return (
+                            <div key={row.label} className="space-y-0.5">
+                              <div className="flex items-center justify-between text-[10px]">
+                                <span className={`font-semibold ${row.text}`}>{row.label}</span>
+                                <span className={`font-bold ${row.text}`}>₹{row.value}/kg</span>
+                              </div>
+                              <div className="h-1.5 rounded-full bg-slate-200/70 overflow-hidden">
+                                <div className={`h-full rounded-full ${row.bar}`} style={{ width: `${Math.min(100, (row.value / max) * 100)}%` }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                        <div className="flex items-center justify-between pt-1 border-t border-slate-200/70">
+                          <span className="text-[10px] font-semibold text-slate-500">👨‍🌾 Farmer payout</span>
+                          <span className="text-[11px] font-extrabold text-emerald-600">₹{farmerPayoutPerKg(Number(inv.price_per_kg))}/kg</span>
+                        </div>
+                        <p className="text-[9px] text-slate-400">
+                          {Number(inv.price_per_kg) < ref.retail
+                            ? `₹${(ref.retail - Number(inv.price_per_kg)).toFixed(0)}/kg cheaper than retail — savings shared with farmers`
+                            : "Fair price, directly to the pool"}
+                        </p>
                       </div>
-                      <p className="text-[10px] text-slate-400 flex items-center gap-1"><Users className="w-3 h-3" />{match} cluster item(s) pooled at this point</p>
+
+                      <p className="text-[10px] text-slate-400">{available.toLocaleString()} kg available · pooled from {match} batch(es)</p>
                       <button onClick={() => openOrder(inv)} className="w-full py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold cursor-pointer">
                         Pre-order Now
                       </button>

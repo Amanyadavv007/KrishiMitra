@@ -149,7 +149,7 @@ const SEED_POINTS: CollectionPoint[] = [
     coordinatorId: "farmer-demo-1",
     coordinatorName: "Ramesh Kumar",
     coordinatorPhone: "9876500001",
-    photoUrl: "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=800&auto=format&fit=crop&q=80",
+    photoUrl: "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=800&auto=format&fit=crop&q=80",
     verified: true,
     rating: 4.7,
     contributingFarmerCount: 34,
@@ -165,7 +165,7 @@ const SEED_POINTS: CollectionPoint[] = [
     coordinatorId: "farmer-demo-2",
     coordinatorName: "Suresh Patil",
     coordinatorPhone: "9876500002",
-    photoUrl: "https://images.unsplash.com/photo-1500937386664-56d1dfef4854?w=800&auto=format&fit=crop&q=80",
+    photoUrl: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&auto=format&fit=crop&q=80",
     verified: true,
     rating: 4.5,
     contributingFarmerCount: 21,
@@ -181,7 +181,7 @@ const SEED_POINTS: CollectionPoint[] = [
     coordinatorId: "farmer-demo-3",
     coordinatorName: "Anita Reddy",
     coordinatorPhone: "9876500003",
-    photoUrl: "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=800&auto=format&fit=crop&q=80",
+    photoUrl: "https://images.unsplash.com/photo-1560493676-04071c5f467b?w=800&auto=format&fit=crop&q=80",
     verified: false,
     rating: 4.2,
     contributingFarmerCount: 12,
@@ -255,6 +255,97 @@ function seedInventory(): CollectionPointInventoryRow[] {
       price_per_kg: 18,
       status: "available",
     },
+    {
+      id: "cpi-demo-6",
+      collection_point_id: "cp-demo-1",
+      crop_name: "Wheat",
+      quantity_kg: 3000,
+      reserved_kg: 0,
+      grade: "A",
+      season: "Rabi 2026",
+      harvest_date: daysAheadStr(-15),
+      ready_from_date: daysAheadStr(7),
+      price_per_kg: 26,
+      status: "available",
+    },
+    {
+      id: "cpi-demo-7",
+      collection_point_id: "cp-demo-2",
+      crop_name: "Potato",
+      quantity_kg: 5000,
+      reserved_kg: 200,
+      grade: "A",
+      season: "Rabi 2026",
+      harvest_date: daysAheadStr(-4),
+      ready_from_date: daysAheadStr(2),
+      price_per_kg: 15,
+      status: "available",
+    },
+    {
+      id: "cpi-demo-8",
+      collection_point_id: "cp-demo-3",
+      crop_name: "Onion",
+      quantity_kg: 2400,
+      reserved_kg: 0,
+      grade: "B",
+      season: "Rabi 2026",
+      harvest_date: daysAheadStr(-9),
+      ready_from_date: daysAheadStr(5),
+      price_per_kg: 20,
+      status: "available",
+    },
+    {
+      id: "cpi-demo-9",
+      collection_point_id: "cp-demo-2",
+      crop_name: "Green Chilli",
+      quantity_kg: 400,
+      reserved_kg: 0,
+      grade: "A",
+      season: "Kharif 2026",
+      harvest_date: daysAheadStr(-1),
+      ready_from_date: daysAheadStr(1),
+      price_per_kg: 78,
+      status: "available",
+    },
+    {
+      id: "cpi-demo-10",
+      collection_point_id: "cp-demo-3",
+      crop_name: "Lady Finger (Okra)",
+      quantity_kg: 350,
+      reserved_kg: 0,
+      grade: "A",
+      season: "Kharif 2026",
+      harvest_date: daysAheadStr(-2),
+      ready_from_date: daysAheadStr(2),
+      price_per_kg: 28,
+      status: "available",
+    },
+    {
+      id: "cpi-demo-11",
+      collection_point_id: "cp-demo-1",
+      crop_name: "Cauliflower",
+      quantity_kg: 800,
+      reserved_kg: 0,
+      grade: "A",
+      season: "Rabi 2026",
+      harvest_date: daysAheadStr(-3),
+      ready_from_date: daysAheadStr(4),
+      price_per_kg: 25,
+      status: "available",
+    },
+    {
+      id: "cpi-demo-12",
+      collection_point_id: "cp-demo-3",
+      crop_name: "Spinach (Palak)",
+      quantity_kg: 500,
+      reserved_kg: 0,
+      grade: "A",
+      season: "Rabi 2026",
+      harvest_date: daysAheadStr(-1),
+      ready_from_date: daysAheadStr(1),
+      price_per_kg: 16,
+      status: "available",
+    },
   ];
 }
 
@@ -296,6 +387,76 @@ function seedContributions(): FarmerContributionRow[] {
       farmer_name: "Anita Reddy",
       crop_name: "Tomato (Hybrid)",
       quantity_kg: 900,
+      source_inventory_id: null,
+      channel: "customer_pool",
+      payout_share: 1,
+      payout_amount: 0,
+      payout_status: "pending",
+    },
+    {
+      id: "fc-demo-4",
+      collection_point_id: "cp-demo-2",
+      inventory_id: "cpi-demo-7",
+      farmer_id: "farmer-demo-4",
+      farmer_name: "Sita Devi",
+      crop_name: "Potato",
+      quantity_kg: 2600,
+      source_inventory_id: null,
+      channel: "customer_pool",
+      payout_share: 0.52,
+      payout_amount: 0,
+      payout_status: "pending",
+    },
+    {
+      id: "fc-demo-5",
+      collection_point_id: "cp-demo-2",
+      inventory_id: "cpi-demo-7",
+      farmer_id: "farmer-demo-5",
+      farmer_name: "Manoj Behera",
+      crop_name: "Potato",
+      quantity_kg: 2200,
+      source_inventory_id: null,
+      channel: "customer_pool",
+      payout_share: 0.44,
+      payout_amount: 0,
+      payout_status: "pending",
+    },
+    {
+      id: "fc-demo-6",
+      collection_point_id: "cp-demo-3",
+      inventory_id: "cpi-demo-5",
+      farmer_id: "farmer-demo-6",
+      farmer_name: "Laxmi Naik",
+      crop_name: "Maize",
+      quantity_kg: 2000,
+      source_inventory_id: null,
+      channel: "customer_pool",
+      payout_share: 1,
+      payout_amount: 0,
+      payout_status: "pending",
+    },
+    {
+      id: "fc-demo-7",
+      collection_point_id: "cp-demo-1",
+      inventory_id: "cpi-demo-6",
+      farmer_id: "farmer-demo-7",
+      farmer_name: "Prakash Jena",
+      crop_name: "Wheat",
+      quantity_kg: 3000,
+      source_inventory_id: null,
+      channel: "customer_pool",
+      payout_share: 1,
+      payout_amount: 0,
+      payout_status: "pending",
+    },
+    {
+      id: "fc-demo-8",
+      collection_point_id: "cp-demo-1",
+      inventory_id: "cpi-demo-11",
+      farmer_id: "farmer-demo-8",
+      farmer_name: "Kavita Sahu",
+      crop_name: "Cauliflower",
+      quantity_kg: 800,
       source_inventory_id: null,
       channel: "customer_pool",
       payout_share: 1,
@@ -760,9 +921,65 @@ export const REFERENCE_PRICES: Record<string, { mandi: number; retail: number }>
   Brinjal: { mandi: 22, retail: 34 },
   Chilli: { mandi: 75, retail: 110 },
   Wheat: { mandi: 22, retail: 32 },
+  Onion: { mandi: 17, retail: 30 },
+  "Lady Finger": { mandi: 24, retail: 40 },
+  Cauliflower: { mandi: 21, retail: 38 },
+  Spinach: { mandi: 12, retail: 24 },
 };
 
 export function referenceFor(cropName: string): { mandi: number; retail: number } {
   const key = Object.keys(REFERENCE_PRICES).find((k) => cropName.toLowerCase().includes(k.toLowerCase()));
   return key ? REFERENCE_PRICES[key] : { mandi: 18, retail: 26 };
+}
+
+/**
+ * Farmer payout share from the platform pool price.
+ * ~82% reaches the contributing farmers after pooling costs.
+ */
+export function farmerPayoutPerKg(pricePerKg: number): number {
+  return Math.round(pricePerKg * 0.82 * 100) / 100;
+}
+
+/**
+ * Farmer chips for a collection point (real names from the
+ * contribution records, plus a +N-more count from the CP stats).
+ */
+export function farmerChipsFor(
+  contributions: FarmerContributionRow[],
+  collectionPointId: string,
+  cpFarmerCount: number
+): { name: string; color: string }[] {
+  const seen = new Set<string>();
+  const chips: { name: string; color: string }[] = [];
+  for (const c of contributions) {
+    if (c.collection_point_id !== collectionPointId) continue;
+    const first = (c.farmer_name || "Farmer").split(" ")[0];
+    if (seen.has(first)) continue;
+    seen.add(first);
+    chips.push({ name: first, color: chipColor(first) });
+  }
+  return chips.slice(0, 2);
+}
+
+function chipColor(name: string): string {
+  const palette = [
+    "bg-emerald-500", "bg-teal-500", "bg-amber-500", "bg-rose-500", "bg-sky-500", "bg-violet-500",
+  ];
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 997;
+  return palette[h % palette.length];
+}
+
+/**
+ * +N more count: distinct contributors beyond the chips shown.
+ */
+export function extraFarmersCount(
+  contributions: FarmerContributionRow[],
+  collectionPointId: string,
+  cpFarmerCount: number
+): number {
+  const distinct = new Set(
+    contributions.filter((c) => c.collection_point_id === collectionPointId).map((c) => c.farmer_name)
+  ).size;
+  return Math.max(0, Math.max(cpFarmerCount, distinct) - 2);
 }
