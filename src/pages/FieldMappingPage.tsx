@@ -3,6 +3,7 @@ import { Satellite, Trash2, Check, Sparkles } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import api from "../services/api";
+import { saveTwinField } from "../lib/digitalTwinData";
 
 export default function FieldMappingPage() {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -109,6 +110,23 @@ export default function FieldMappingPage() {
     }
   }, [points, activeOverlay]);
 
+  // Client-side area fallback (shoelace formula) so the twin works even without the backend
+  const computeAreaAcresLocal = (pts: { lat: number; lng: number }[]): number => {
+    if (pts.length < 3) return 0;
+    const R = 6371000;
+    let area = 0;
+    for (let i = 0; i < pts.length; i++) {
+      const p1 = pts[i];
+      const p2 = pts[(i + 1) % pts.length];
+      const lat1 = (p1.lat * Math.PI) / 180;
+      const lat2 = (p2.lat * Math.PI) / 180;
+      const dLng = ((p2.lng - p1.lng) * Math.PI) / 180;
+      area += dLng * (2 + Math.sin(lat1) + Math.sin(lat2));
+    }
+    area = Math.abs((area * R * R) / 2);
+    return Math.round((area / 4046.86) * 100) / 100; // m² → acres
+  };
+
   const clearPoints = () => {
     setPoints([]);
     setMetrics({ acres: 0, hectares: 0, guntha: 0, perimeterMeters: 0 });
@@ -124,6 +142,18 @@ export default function FieldMappingPage() {
   };
 
   const savePlotToDigitalTwin = async () => {
+    // Persist the plot locally so the Digital Twin page picks it up instantly
+    const acres = metrics?.acres || computeAreaAcresLocal(points);
+    const centroid = metrics?.centroid || {
+      lat: points.reduce((a, p) => a + p.lat, 0) / points.length,
+      lng: points.reduce((a, p) => a + p.lng, 0) / points.length,
+    };
+    saveTwinField({
+      name: fieldName || "My Farm Plot",
+      areaAcres: acres,
+      centroid: { lat: centroid.lat, lng: centroid.lng },
+      savedAt: new Date().toISOString(),
+    });
     try {
       const res = await api.post("/gis/save-field", {
         fieldName,
@@ -135,7 +165,10 @@ export default function FieldMappingPage() {
         setTimeout(() => setSavedSuccess(false), 3500);
       }
     } catch (err) {
-      console.error("Failed to save field:", err);
+      // Backend may be unavailable (static deploy) — local save already succeeded
+      console.warn("Backend field save skipped, local twin save OK:", err);
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 3500);
     }
   };
 
