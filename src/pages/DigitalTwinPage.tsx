@@ -290,12 +290,12 @@ export default function DigitalTwinPage() {
               )}
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
-              {t.fieldName || `${t.district} Farm Plot`}
+              {field?.name || t.fieldName || `${t.district} Farm Plot`}
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-1 flex flex-wrap items-center gap-1.5">
               <MapPin className="w-3.5 h-3.5 text-emerald-600" />
               <span>{t.district}, {t.state} • {t.soilClass} soil</span>
-              {t.areaAcres != null && <span className="font-semibold text-slate-700">• {t.areaAcres} acres</span>}
+              {(field?.areaAcres ?? t.areaAcres) != null && <span className="font-semibold text-slate-700">• {field?.areaAcres ?? t.areaAcres} acres</span>}
             </p>
           </div>
           <div className="flex items-center gap-2">
