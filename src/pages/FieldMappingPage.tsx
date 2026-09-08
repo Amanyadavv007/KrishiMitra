@@ -152,6 +152,7 @@ export default function FieldMappingPage() {
       name: fieldName || "My Farm Plot",
       areaAcres: acres,
       centroid: { lat: centroid.lat, lng: centroid.lng },
+      coordinates: points,
       savedAt: new Date().toISOString(),
     });
     try {

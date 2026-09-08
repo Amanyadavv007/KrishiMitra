@@ -508,6 +508,7 @@ export interface TwinField {
   name: string;
   areaAcres: number;
   centroid: { lat: number; lng: number };
+  coordinates?: { lat: number; lng: number }[]; // drawn boundary (new saves include this)
   savedAt: string;
 }
 
