@@ -66,6 +66,7 @@ const MandiPricePage = lazy(() => import("./pages/MandiPricePage"));
 const MarketplacePage = lazy(() => import("./pages/MarketplacePage"));
 const SupplyChainPage = lazy(() => import("./pages/SupplyChainPage"));
 const ProcessProducePage = lazy(() => import("./pages/ProcessProducePage"));
+const SubscriptionPage = lazy(() => import("./pages/SubscriptionPage"));
 
 /**
  * Full-screen themed loading state shown while a lazy page chunk downloads.
@@ -165,6 +166,7 @@ function AppShell() {
                       <Route path="/admin" element={<AdminDashboard />} />
                       <Route path="/login" element={<LoginPage />} />
                       <Route path="/register" element={<RegisterPage />} />
+                      <Route path="/subscription" element={<SubscriptionPage />} />
 
                       {/* Merchant World (role-guarded) */}
                       <Route

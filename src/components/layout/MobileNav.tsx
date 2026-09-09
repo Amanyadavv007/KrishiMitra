@@ -5,7 +5,7 @@ import {
   User, LogOut, Settings as SettingsIcon, Bell, Store, IndianRupee,
   Tractor, BrainCircuit, FlaskConical, Satellite, Map as MapIcon,
   SlidersHorizontal, ShoppingCart, GraduationCap, MessageCircle, Boxes,
-  Package, Handshake,
+  Package, Handshake, Crown,
 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useLanguage } from "../../contexts/LanguageContext";
@@ -185,6 +185,21 @@ export default function MobileNav() {
 
             {/* Scrollable groups — same order/groups as the desktop navbar */}
             <div className="overflow-y-auto px-4 py-3 space-y-4 pb-8">
+              {/* KrishiMitra Pro — subscription CTA (desktop navbar shows it next to Settings) */}
+              <Link
+                to="/subscription"
+                className="flex items-center justify-between px-4 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-green-500 text-white shadow-md shadow-emerald-500/25"
+              >
+                <span className="flex items-center gap-2.5">
+                  <Crown className="w-[18px] h-[18px] text-amber-300" />
+                  <span>
+                    <span className="block text-sm font-extrabold">{t("subscribePro")}</span>
+                    <span className="block text-[10px] text-emerald-100">{t("subscribeDesc")}</span>
+                  </span>
+                </span>
+                <ChevronRight className="w-4 h-4 text-emerald-100" />
+              </Link>
+
               {/* Direct links (desktop top-level) */}
               <div className="grid grid-cols-2 gap-2">
                 {quickLinks.map((item) => (

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { Sprout, User, LogOut, ChevronDown, Settings } from "lucide-react";
+import { Sprout, User, LogOut, ChevronDown, Settings, Sparkles } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useLanguage } from "../../contexts/LanguageContext";
 import LanguageSelector from "../common/LanguageSelector";
@@ -116,6 +116,15 @@ export default function Navbar() {
 
           {/* RIGHT: Language selector, notifications, login/profile */}
           <div className="flex items-center gap-2.5">
+            {/* KrishiMitra Pro — subscription CTA next to Settings */}
+            <Link
+              to="/subscription"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-700 hover:to-green-600 shadow-md shadow-emerald-500/25 transition-all cursor-pointer"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span className="hidden sm:inline">{t("subscribe")}</span>
+            </Link>
+
             {/* Settings Dropdown — language, alerts & account in one place */}
             <div className="relative">
               <button
