@@ -183,6 +183,78 @@ export async function loadConversationHistory(
 }
 
 // ============================================================
+// AI PRICE SUGGESTION — Feature A (Process Your Produce)
+// Suggests a fair retail price for a farmer's processed product,
+// grounded in the raw crop's mandi/farm-gate rate. Never throws:
+// the caller falls back to the offline multiplier table.
+// ============================================================
+
+export interface PriceSuggestion {
+  minPrice: number;
+  maxPrice: number;
+  reasoning: string;
+  source: "ai" | "fallback";
+}
+
+export async function suggestProductPrice(
+  productName: string,
+  rawCropName: string,
+  rawPricePerKg: number
+): Promise<PriceSuggestion | null> {
+  const prompt =
+    `You are an Indian agricultural market pricing expert. A farmer sells raw ${rawCropName} at about ₹${rawPricePerKg} per kg (farm-gate/mandi rate). ` +
+    `He wants to sell a home-made processed product called "${productName}" directly to customers. ` +
+    `Reply with ONLY a compact JSON object, no markdown, in this exact shape: ` +
+    `{"minPrice": <number rupees per kg/pack>, "maxPrice": <number>, "reasoning": "<one short sentence in simple English explaining the typical retail multiplier vs raw crop>"}. ` +
+    `Use realistic Indian retail rates for that processed product.`;
+
+  try {
+    const reply = await askGeminiRaw(prompt);
+    const match = reply.match(/\{[\s\S]*\}/);
+    if (match) {
+      const parsed = JSON.parse(match[0]) as {
+        minPrice?: number;
+        maxPrice?: number;
+        reasoning?: string;
+      };
+      const min = Math.round(Number(parsed.minPrice) || 0);
+      const max = Math.round(Number(parsed.maxPrice) || 0);
+      if (min > 0 && max >= min) {
+        return {
+          minPrice: min,
+          maxPrice: max,
+          reasoning: parsed.reasoning || `Typical retail rate for ${productName}.`,
+          source: "ai",
+        };
+      }
+    }
+  } catch {
+    // fall through to offline fallback
+  }
+  return null; // caller applies the offline multiplier fallback
+}
+
+/** Low-level single-shot Gemini text call (no RAG, no image). */
+async function askGeminiRaw(prompt: string): Promise<string> {
+  const response = await fetch(GEMINI_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.4,
+        maxOutputTokens: 200,
+      },
+    }),
+  });
+  if (!response.ok) throw new Error(`Gemini API error: ${response.status}`);
+  const data: GeminiResponse = await response.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error("Empty Gemini response");
+  return text;
+}
+
+// ============================================================
 // CROP DISEASE DIAGNOSIS — structured JSON via free Gemini LLM,
 // grounded in the local agriculture knowledge base.
 // NOTE: we NEVER fabricate a diagnosis. If the AI call fails we

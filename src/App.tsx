@@ -65,6 +65,7 @@ const InventoryPage = lazy(() => import("./pages/InventoryPage"));
 const MandiPricePage = lazy(() => import("./pages/MandiPricePage"));
 const MarketplacePage = lazy(() => import("./pages/MarketplacePage"));
 const SupplyChainPage = lazy(() => import("./pages/SupplyChainPage"));
+const ProcessProducePage = lazy(() => import("./pages/ProcessProducePage"));
 
 /**
  * Full-screen themed loading state shown while a lazy page chunk downloads.
@@ -280,6 +281,8 @@ function AppShell() {
                       <Route path="/mandi-prices" element={<MandiPricePage />} />
                       <Route path="/marketplace" element={<MarketplacePage />} />
                       <Route path="/supply-chain" element={<SupplyChainPage />} />
+                      {/* Feature A: process produce into value-added products */}
+                      <Route path="/process" element={<ProcessProducePage />} />
                     </Routes>
                   </Suspense>
                 </main>                <Footer />
