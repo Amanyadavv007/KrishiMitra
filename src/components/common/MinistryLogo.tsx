@@ -9,7 +9,7 @@ interface MinistryLogoProps {
  * pre-tinted slate-800 so it blends with the navbar's typography.
  * Served from /public — cached by the browser, never re-parsed by JS.
  */
-export default function MinistryLogo({ className = "h-8 w-auto" }: MinistryLogoProps) {
+export default function MinistryLogo({ className = "h-9 w-auto" }: MinistryLogoProps) {
   return (
     <img
       src="/ministry-emblem.svg"

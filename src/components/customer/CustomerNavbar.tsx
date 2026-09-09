@@ -44,10 +44,10 @@ export default function CustomerNavbar() {
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center gap-4">
         {/* Far-left: logo */}
         <Link to="/shop" className="flex items-center gap-2.5 shrink-0">
-          <span className="hidden sm:inline-flex">
-            <MinistryLogo className="h-7 w-auto" />
+          <span className="inline-flex">
+            <MinistryLogo className="h-11 w-auto" />
           </span>
-          <span className="w-px self-stretch my-2 bg-slate-200" aria-hidden="true" />
+          <span className="w-px self-stretch my-1.5 bg-slate-200" aria-hidden="true" />
           <span className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-green-500 text-white flex items-center justify-center shadow-md shadow-emerald-500/30">
             <Sprout className="w-5 h-5" />
           </span>

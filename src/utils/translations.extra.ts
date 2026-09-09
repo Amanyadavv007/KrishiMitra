@@ -6,7 +6,7 @@ export const EXTRA_KEYS: Record<string, Record<string, string>> = {
     // KrishiMitra Pro subscription
     subscribe: "Subscribe",
     subscribePro: "KrishiMitra Pro",
-    subscribeDesc: "₹999/mo — sensors + land data + unlimited AI",
+    subscribeDesc: "₹999/yr — full sensor kit + unlimited AI",
     // Feature A — Farm to Product
     farmToProduct: "Farm to Product",
     // Dashboard
@@ -123,7 +123,7 @@ export const EXTRA_KEYS: Record<string, Record<string, string>> = {
   hi: {
     subscribe: "सदस्यता लें",
     subscribePro: "कृषिमित्र प्रो",
-    subscribeDesc: "₹999/माह — सेंसर + भूमि डेटा + असीमित AI",
+    subscribeDesc: "₹999/वर्ष — पूरा सेंसर किट + असीमित AI",
     farmToProduct: "खेत से उत्पाद",
     greeting: "नमस्ते",
     scanCrop: "फसल स्कैन करें",

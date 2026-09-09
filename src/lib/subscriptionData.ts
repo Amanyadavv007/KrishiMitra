@@ -1,7 +1,7 @@
 // ============================================================
-// Subscription data layer — KrishiMitra Pro (₹999/month)
-// Physical soil & moisture sensors installed on-farm, ongoing
-// land-data reports, and unlimited access to all AI features.
+// Subscription data layer — KrishiMitra Pro (₹999/year)
+// Full physical soil & moisture sensor kit installed on-farm,
+// ongoing land-data reports, and unlimited AI features.
 //
 // Tries Supabase first (mirrors supabaseData.ts patterns),
 // falls back to localStorage when the migration hasn't run
@@ -10,6 +10,7 @@
 import { supabase, isSupabaseConfigured } from "./supabaseClient";
 
 export const PLAN_PRICE_INR = 999;
+export const PLAN_ID = "pro_annual";
 
 export interface SubscriptionRow {
   id: string;
@@ -49,7 +50,7 @@ function mapSupabaseRow(r: any): SubscriptionRow {
   return {
     id: String(r.id),
     farmer_id: r.farmer_id,
-    plan: r.plan ?? "pro_monthly",
+    plan: r.plan ?? "pro_annual",
     amount_inr: Number(r.amount_inr ?? PLAN_PRICE_INR),
     status: r.status ?? "active",
     payment_ref: r.payment_ref ?? "",
@@ -60,9 +61,9 @@ function mapSupabaseRow(r: any): SubscriptionRow {
   };
 }
 
-function plusOneMonth(from = new Date()): string {
+function plusOneYear(from = new Date()): string {
   const d = new Date(from);
-  d.setMonth(d.getMonth() + 1);
+  d.setFullYear(d.getFullYear() + 1);
   return d.toISOString();
 }
 
@@ -114,13 +115,13 @@ export async function activateSubscription(
   const local: SubscriptionRow = {
     id: `local_${now.getTime()}`,
     farmer_id: farmerId,
-    plan: "pro_monthly",
+    plan: PLAN_ID,
     amount_inr: PLAN_PRICE_INR,
     status: "active",
     payment_ref: paymentRef,
     sensor_install_status: "scheduled",
     current_period_start: now.toISOString(),
-    current_period_end: plusOneMonth(now),
+    current_period_end: plusOneYear(now),
     created_at: now.toISOString(),
   };
   lsSet(local);
@@ -132,7 +133,7 @@ export async function activateSubscription(
         .upsert(
           {
             farmer_id: farmerId,
-            plan: "pro_monthly",
+            plan: PLAN_ID,
             amount_inr: PLAN_PRICE_INR,
             status: "active",
             payment_ref: paymentRef,

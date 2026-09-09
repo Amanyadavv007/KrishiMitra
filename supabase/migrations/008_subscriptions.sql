@@ -1,6 +1,6 @@
 -- =====================================================
--- 008 — Farmer Subscriptions (KrishiMitra Pro — ₹999/month)
--- Physical soil/moisture sensors + installation + land data
+-- 008 — Farmer Subscriptions (KrishiMitra Pro — ₹999/year)
+-- Full physical soil/moisture sensor kit + installation + land data
 -- + unlimited AI features.
 -- Run in: Supabase Dashboard → SQL Editor → paste → Run
 -- Safe to re-run: uses IF NOT EXISTS.
@@ -9,7 +9,7 @@
 CREATE TABLE IF NOT EXISTS subscriptions (
   id BIGSERIAL PRIMARY KEY,
   farmer_id UUID REFERENCES farmers(id) ON DELETE CASCADE,
-  plan TEXT NOT NULL DEFAULT 'pro_monthly',
+  plan TEXT NOT NULL DEFAULT 'pro_annual',
   amount_inr NUMERIC NOT NULL DEFAULT 999,
   status TEXT NOT NULL DEFAULT 'active'
     CHECK (status IN ('active', 'pending_payment', 'cancelled', 'expired')),

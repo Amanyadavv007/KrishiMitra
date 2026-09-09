@@ -12,9 +12,9 @@ import {
 } from "../lib/subscriptionData";
 
 /**
- * KrishiMitra Pro — ₹999/month farmer subscription.
- * Physical soil & moisture sensors installed by our team, ongoing land-data
- * reports, and unlimited access to every AI feature.
+ * KrishiMitra Pro — ₹999/year.
+ * Full physical soil & moisture sensor kit installed by our team, ongoing
+ * land-data reports, and unlimited access to every AI feature.
  *
  * Payment: a Razorpay Payment Page (hosted, UPI/cards/netbanking) opened in a
  * new tab keeps this fully static-hosting compatible. The plan activates on
@@ -26,14 +26,14 @@ const RAZORPAY_PAYMENT_PAGE_URL = import.meta.env.VITE_RAZORPAY_PAYMENT_PAGE_URL
 const BENEFITS = [
   {
     icon: Radio,
-    title: "Physical Soil & Moisture Sensors",
-    desc: "Real sensors placed in your own field — not estimates. Live soil moisture, temperature and nutrient signals from your land.",
+    title: "Full Sensor Kit in Your Field",
+    desc: "A complete physical kit — soil moisture at two depths, soil temperature, salinity (EC) and ambient humidity — placed in your own field, not estimates.",
     accent: "emerald",
   },
   {
     icon: Wrench,
     title: "We Install, We Maintain",
-    desc: "Our team visits your farm, installs and calibrates everything, and services the sensors whenever needed. Zero effort for you.",
+    desc: "Our team visits your farm, installs and calibrates the entire kit, and services it whenever needed — free for the whole year. Zero effort for you.",
     accent: "amber",
   },
   {
@@ -126,13 +126,14 @@ export default function SubscriptionPage() {
             Your land, monitored. Your AI, unlimited.
           </h1>
           <p className="mt-2 text-sm text-slate-500 max-w-2xl mx-auto">
-            Real sensors in your soil, installed and maintained by our team — plus unlimited access to every AI feature AgriNexus offers.
+            A full sensor kit installed in your soil by our team — plus a year of unlimited access to every AI feature AgriNexus offers.
           </p>
           <div className="mt-4 inline-flex items-baseline gap-1.5">
             <IndianRupee className="w-6 h-6 text-emerald-600 relative top-0.5" />
             <span className="text-4xl font-extrabold text-slate-900">999</span>
-            <span className="text-sm font-semibold text-slate-400">/ month</span>
+            <span className="text-sm font-semibold text-slate-400">/ year</span>
           </div>
+          <p className="mt-1 text-[11px] font-semibold text-emerald-700">That's less than ₹3 a day for a fully instrumented farm.</p>
         </div>
 
         {/* Active banner */}
@@ -180,12 +181,14 @@ export default function SubscriptionPage() {
           <h2 className="text-sm font-bold text-slate-900 mb-3">Everything included</h2>
           <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5">
             {[
-              "2 soil-moisture sensors (30 cm & 60 cm depth)",
-              "1 soil temperature + EC sensor",
-              "On-farm installation & calibration by our team",
-              "Free sensor maintenance & battery replacement",
+              "Soil-moisture sensors at 2 depths (30 cm & 60 cm)",
+              "Soil temperature sensor",
+              "Soil salinity (EC) sensor",
+              "Ambient temperature & humidity sensor",
+              "On-farm installation & calibration of the full kit",
+              "Free sensor maintenance & battery replacement all year",
               "Weekly land-health report in your language",
-              "Live soil data in your Digital Twin & What-If simulator",
+              "Live sensor data in your Digital Twin & What-If simulator",
               "Unlimited crop-doctor scans & AI advisory",
               "Unlimited AI assistant conversations",
               "Priority support on WhatsApp",
@@ -202,7 +205,7 @@ export default function SubscriptionPage() {
         {/* CTA */}
         <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-600 to-green-600 p-6 sm:p-8 text-center shadow-lg shadow-emerald-500/20">
           <p className="text-white font-extrabold text-lg">Subscribe to KrishiMitra Pro</p>
-          <p className="text-emerald-100 text-xs mt-1">₹999/month · sensors + installation + land data + unlimited AI</p>
+          <p className="text-emerald-100 text-xs mt-1">₹999/year · full sensor kit + installation + land data + unlimited AI</p>
           {!user && (
             <p className="text-emerald-100 text-xs mt-2 font-semibold">
               You'll be asked to log in first so we know whose farm to equip.
