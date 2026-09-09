@@ -8,7 +8,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useLocation } from "../contexts/LocationContext";
 import {
-  fetchTwinState, loadTwinField, saveTwinField, wiltThreshold,
+  fetchTwinState, loadTwinField, saveTwinField, wiltThreshold, getStateClimate,
   type TwinState, type TwinAdvisory, type TwinProjectionPoint,
 } from "../lib/digitalTwinData";
 
@@ -277,6 +277,13 @@ export default function DigitalTwinPage() {
   const rootZone = Math.round(((t.moisture1to3 + t.moisture3to9) / 2) * 10) / 10;
   const maxChart = Math.max(...t.projection.map((p) => p.moisture), rootZone) * 1.15;
 
+  // Season context for the crop-methodology panel (climate = 24-yr normal, not today's weather)
+  const kharifNow = new Date().getMonth() >= 5 && new Date().getMonth() <= 9;
+  const seasonName = kharifNow ? "Kharif (Jun–Oct)" : "Rabi (Nov–Mar)";
+  const seasonRainMm = kharifNow
+    ? getStateClimate(t.state).annualRainMm * 0.75 // SW-monsoon share (IMD climatology)
+    : getStateClimate(t.state).annualRainMm * 0.10; // dry rabi share
+
   return (
     <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -364,9 +371,23 @@ export default function DigitalTwinPage() {
             <span className="p-2 rounded-xl bg-lime-50 text-lime-600"><Sprout className="w-5 h-5" /></span>
             <div>
               <h2 className="text-lg font-bold text-slate-900 leading-tight">Best crops to grow on this soil, right now</h2>
-              <p className="text-xs text-slate-500">
-                Matched on your soil pH ({t.ph}), current root-zone moisture ({rootZone}%), and the {new Date().getMonth() >= 5 && new Date().getMonth() <= 9 ? "Kharif" : "Rabi"} season.
+              <p className="text-xs text-slate-500 mt-1">
+                FAO-EcoCrop-style suitability: pH × soil texture × season × water × temperature factors <b>multiply</b>, so one poor factor caps the score — no single data point decides it.
               </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[11px]">
+            <div className="p-3 rounded-xl bg-lime-50/70 border border-lime-100">
+              <p className="font-bold text-lime-800 mb-0.5">Water signal = climate + today</p>
+              <p className="text-slate-600 leading-relaxed">≈{Math.round(seasonRainMm)} mm {seasonName} rainfall typical for {t.state} (24-yr normal, 1997–2020) blended 60/40 with today's satellite moisture ({rootZone}%).</p>
+            </div>
+            <div className="p-3 rounded-xl bg-teal-50/70 border border-teal-100">
+              <p className="font-bold text-teal-800 mb-0.5">pH from state dataset</p>
+              <p className="text-slate-600 leading-relaxed">Scored against FAO-EcoCrop pH windows (optimal vs acceptable). {t.state} average pH is {t.ph} — confirm your plot with a Soil Health Card test.</p>
+            </div>
+            <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-100">
+              <p className="font-bold text-amber-800 mb-0.5">Season = growing window</p>
+              <p className="text-slate-600 leading-relaxed">It is {seasonName} now. Off-season crops get a hard 0.5× penalty — sowing then would fight the climate, whatever today's weather looks like.</p>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -447,7 +468,10 @@ export default function DigitalTwinPage() {
               <span>Live Soil Moisture by Depth (satellite-derived)</span>
             </h2>
             <p className="text-xs text-slate-500 mt-1">
-              Red line marks the wilting point ({wilting}% for {t.soilClass}). Below it, crops cannot pull water.
+              Red line = permanent wilting point ({wilting}% for {t.soilClass}) — water held below −1500 kPa that crops cannot extract (FAO-56). Below it, crops cannot pull water.
+            </p>
+            <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+              {t.dataSources.moistureModel} — volumetric water content for the model grid cell containing your plot, at four depth layers (0–1, 1–3, 3–9, 9–27 cm). This is a land-surface model estimate, not an in-field sensor reading.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
@@ -495,8 +519,10 @@ export default function DigitalTwinPage() {
 
         {/* Footer note */}
         <p className="text-[11px] text-slate-400 text-center max-w-2xl mx-auto leading-relaxed">
-          Soil moisture, temperature and ET₀ come from the Open-Meteo satellite soil model at your GPS location.
-          N-P-K and pH are state-level reference values ({t.state}) — for exact field values, get a free government Soil Health Card test.
+          Soil moisture, temperature and ET₀: Open-Meteo land-surface model (ECMWF/GFS soil analysis) queried at your plot's coordinates — not field sensors. ET₀ is FAO-56 Penman–Monteith.
+          Wilting points: FAO-56 (−1500 kPa) thresholds by soil class.
+          Crop scores: FAO-EcoCrop-style suitability on the 24-year state climatology (1997–2020, datasets/state_weather_data_1997_2020.csv) blended with today's satellite moisture.
+          N-P-K and pH: {t.state} state averages (datasets/state_soil_data.csv) — for exact field values, get a free government Soil Health Card test.
           Last synced {new Date(t.fetchedAt).toLocaleTimeString()}.
         </p>
       </div>

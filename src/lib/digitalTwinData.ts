@@ -4,7 +4,9 @@
 //  - Open-Meteo forecast API: satellite-derived soil moisture at 4 depths,
 //    FAO-56 reference evapotranspiration (ET0), rain + temp forecast (free, no key)
 //  - datasets/state_soil_data.csv: state-level N, P, K, pH (embedded below)
+//  - datasets/state_weather_data_1997_2020.csv: 24-year state climatology (embedded below)
 //  - Transparent water-balance model -> irrigation, yield, crop & fertilizer advisories
+//  - Crop suitability: FAO-EcoCrop-style multiplicative scoring (pH × water × texture × season × temperature)
 // Rate-limit resilience:
 //  - 10-minute localStorage cache per location (avoids repeat 429s on navigation)
 //  - Retry with backoff on 429/5xx
@@ -68,6 +70,14 @@ export interface TwinState {
   projection: TwinProjectionPoint[];
   advisories: TwinAdvisory[];
   crops: CropFit[];
+  // provenance — what each displayed number actually is, for the UI to show
+  dataSources: {
+    moistureModel: string; // what produced the depth-wise moisture numbers
+    moistureLayers: string; // what the depth layers represent
+    et0: string;
+    chemistry: string; // what the pH/N-P-K numbers are (and are not)
+    climate: string; // what the crop scoring is based on
+  };
   fetchedAt: string;
   isEstimated: boolean; // true when Open-Meteo was unavailable (fallback model used)
 }
@@ -112,22 +122,80 @@ export function getStateSoil(state: string): StateSoil {
   return STATE_SOIL[state] || { ph: 6.5, n: 70, p: 35, k: 28, class: "Alluvial Loam" };
 }
 
-// ---- Simple crop suitability table (pH range, water need, Indian growing windows) ----
-interface CropProfile { name: string; emoji: string; pHmin: number; pHmax: number; water: "high" | "medium" | "low"; season: "kharif" | "rabi" | "both" }
+// ============================================================
+// Real per-state climatology — computed from datasets/state_weather_data_1997_2020.csv
+// (24 annual observations per state, 1997–2020; means taken across all years.
+//  Regenerate with: sh scripts/verify-climatology.sh after editing the CSV.)
+// This is CLIMATE (the long-run normal), deliberately kept separate from today's
+// weather: planting decisions must never hinge on a single day of data.
+// ============================================================
+interface StateClimate { annualRainMm: number; meanTempC: number; meanHumidityPct: number }
+
+const STATE_CLIMATE: Record<string, StateClimate> = {
+  "Andhra Pradesh": { annualRainMm: 1021, meanTempC: 28.0, meanHumidityPct: 70 },
+  "Arunachal Pradesh": { annualRainMm: 2158, meanTempC: 22.2, meanHumidityPct: 76 },
+  Assam: { annualRainMm: 1958, meanTempC: 22.9, meanHumidityPct: 77 },
+  Bihar: { annualRainMm: 1002, meanTempC: 26.2, meanHumidityPct: 56 },
+  Chhattisgarh: { annualRainMm: 1243, meanTempC: 26.2, meanHumidityPct: 59 },
+  Delhi: { annualRainMm: 732, meanTempC: 25.6, meanHumidityPct: 45 },
+  Goa: { annualRainMm: 2178, meanTempC: 27.4, meanHumidityPct: 74 },
+  Gujarat: { annualRainMm: 756, meanTempC: 27.6, meanHumidityPct: 48 },
+  Haryana: { annualRainMm: 1015, meanTempC: 24.2, meanHumidityPct: 47 },
+  "Himachal Pradesh": { annualRainMm: 1052, meanTempC: 21.2, meanHumidityPct: 49 },
+  Jharkhand: { annualRainMm: 1321, meanTempC: 23.4, meanHumidityPct: 62 },
+  "Jammu and Kashmir": { annualRainMm: 698, meanTempC: 9.3, meanHumidityPct: 53 },
+  Karnataka: { annualRainMm: 866, meanTempC: 23.7, meanHumidityPct: 68 },
+  Kerala: { annualRainMm: 1804, meanTempC: 26.9, meanHumidityPct: 80 },
+  "Madhya Pradesh": { annualRainMm: 1193, meanTempC: 25.2, meanHumidityPct: 52 },
+  Maharashtra: { annualRainMm: 2413, meanTempC: 26.7, meanHumidityPct: 68 },
+  Manipur: { annualRainMm: 1296, meanTempC: 20.5, meanHumidityPct: 74 },
+  Meghalaya: { annualRainMm: 2913, meanTempC: 17.9, meanHumidityPct: 81 },
+  Mizoram: { annualRainMm: 2060, meanTempC: 22.9, meanHumidityPct: 78 },
+  Nagaland: { annualRainMm: 1171, meanTempC: 18.4, meanHumidityPct: 73 },
+  Odisha: { annualRainMm: 1536, meanTempC: 26.4, meanHumidityPct: 73 },
+  Puducherry: { annualRainMm: 1139, meanTempC: 28.1, meanHumidityPct: 75 },
+  Punjab: { annualRainMm: 1015, meanTempC: 24.2, meanHumidityPct: 47 },
+  Sikkim: { annualRainMm: 1043, meanTempC: 7.4, meanHumidityPct: 73 },
+  "Tamil Nadu": { annualRainMm: 1232, meanTempC: 28.0, meanHumidityPct: 72 },
+  Telangana: { annualRainMm: 805, meanTempC: 26.1, meanHumidityPct: 60 },
+  Tripura: { annualRainMm: 2224, meanTempC: 25.3, meanHumidityPct: 75 },
+  "Uttar Pradesh": { annualRainMm: 998, meanTempC: 25.9, meanHumidityPct: 51 },
+  Uttarakhand: { annualRainMm: 1245, meanTempC: 18.0, meanHumidityPct: 55 },
+  "West Bengal": { annualRainMm: 1565, meanTempC: 25.8, meanHumidityPct: 74 },
+};
+
+export function getStateClimate(state: string): StateClimate {
+  return STATE_CLIMATE[state] || { annualRainMm: 1100, meanTempC: 25, meanHumidityPct: 60 };
+}
+
+export const CROP_SCORING_METHODOLOGY =
+  "FAO-EcoCrop-style suitability: pH × water × soil-texture × season × temperature factors MULTIPLY (0–1 each), so a single bad factor caps the whole score — no factor can be compensated away.";
+
+// ---- Crop suitability profiles (pH range, water need, soil tolerance, growing windows) ----
+// Sources: FAO-EcoCrop database (pH absolute/optimal ranges, water need, planting windows);
+// ICAR/State package-of-practice norms for Indian growing seasons.
+interface CropProfile {
+  name: string; emoji: string;
+  pHmin: number; pHoptLo: number; pHoptHi: number; pHmax: number; // FAO-EcoCrop: absolute + optimal pH ranges
+  water: "high" | "medium" | "low"; // low: rainfed on light soils; medium: moderate supply; high: ponded/rainfed-humid
+  lightSoils: boolean; // tolerates sandy/loamy, free-draining soils
+  heavySoils: boolean; // tolerates black clay (moisture-retentive; risks waterlogging)
+  season: "kharif" | "rabi" | "both";
+}
 
 const CROPS: CropProfile[] = [
-  { name: "Paddy (Rice)", emoji: "🌾", pHmin: 5.5, pHmax: 7.5, water: "high", season: "kharif" },
-  { name: "Wheat", emoji: "🌾", pHmin: 6.0, pHmax: 7.8, water: "medium", season: "rabi" },
-  { name: "Maize", emoji: "🌽", pHmin: 5.8, pHmax: 7.5, water: "medium", season: "both" },
-  { name: "Cotton", emoji: "☁️", pHmin: 6.0, pHmax: 8.2, water: "medium", season: "kharif" },
-  { name: "Sugarcane", emoji: "🎋", pHmin: 6.0, pHmax: 7.8, water: "high", season: "both" },
-  { name: "Groundnut", emoji: "🥜", pHmin: 6.0, pHmax: 7.5, water: "low", season: "kharif" },
-  { name: "Mustard", emoji: "🌻", pHmin: 6.0, pHmax: 7.8, water: "low", season: "rabi" },
-  { name: "Chickpea", emoji: "🫘", pHmin: 6.2, pHmax: 8.2, water: "low", season: "rabi" },
-  { name: "Tomato", emoji: "🍅", pHmin: 6.0, pHmax: 7.2, water: "medium", season: "both" },
-  { name: "Potato", emoji: "🥔", pHmin: 5.5, pHmax: 6.8, water: "medium", season: "rabi" },
-  { name: "Onion", emoji: "🧅", pHmin: 6.0, pHmax: 7.5, water: "low", season: "rabi" },
-  { name: "Pulses (Moong)", emoji: "🟢", pHmin: 6.0, pHmax: 7.8, water: "low", season: "kharif" },
+  { name: "Paddy (Rice)", emoji: "🌾", pHmin: 4.5, pHoptLo: 5.5, pHoptHi: 7.0, pHmax: 8.5, water: "high", lightSoils: false, heavySoils: true, season: "kharif" },
+  { name: "Wheat", emoji: "🌾", pHmin: 6.0, pHoptLo: 6.5, pHoptHi: 7.5, pHmax: 8.5, water: "medium", lightSoils: true, heavySoils: true, season: "rabi" },
+  { name: "Maize", emoji: "🌽", pHmin: 5.5, pHoptLo: 6.0, pHoptHi: 7.0, pHmax: 8.0, water: "medium", lightSoils: true, heavySoils: true, season: "both" },
+  { name: "Cotton", emoji: "☁️", pHmin: 5.5, pHoptLo: 6.0, pHoptHi: 8.0, pHmax: 8.5, water: "medium", lightSoils: false, heavySoils: true, season: "kharif" },
+  { name: "Sugarcane", emoji: "🎋", pHmin: 6.0, pHoptLo: 6.5, pHoptHi: 7.5, pHmax: 8.5, water: "high", lightSoils: true, heavySoils: true, season: "both" },
+  { name: "Groundnut", emoji: "🥜", pHmin: 5.5, pHoptLo: 6.0, pHoptHi: 7.0, pHmax: 7.8, water: "low", lightSoils: true, heavySoils: false, season: "kharif" },
+  { name: "Mustard", emoji: "🌻", pHmin: 6.0, pHoptLo: 6.5, pHoptHi: 7.5, pHmax: 8.5, water: "low", lightSoils: true, heavySoils: true, season: "rabi" },
+  { name: "Chickpea", emoji: "🫘", pHmin: 6.0, pHoptLo: 6.5, pHoptHi: 8.0, pHmax: 8.5, water: "low", lightSoils: true, heavySoils: true, season: "rabi" },
+  { name: "Tomato", emoji: "🍅", pHmin: 5.5, pHoptLo: 6.0, pHoptHi: 7.0, pHmax: 7.5, water: "medium", lightSoils: true, heavySoils: true, season: "both" },
+  { name: "Potato", emoji: "🥔", pHmin: 5.0, pHoptLo: 5.5, pHoptHi: 6.5, pHmax: 7.0, water: "medium", lightSoils: true, heavySoils: true, season: "rabi" },
+  { name: "Onion", emoji: "🧅", pHmin: 6.0, pHoptLo: 6.5, pHoptHi: 7.5, pHmax: 8.0, water: "low", lightSoils: true, heavySoils: true, season: "rabi" },
+  { name: "Pulses (Moong)", emoji: "🟢", pHmin: 5.5, pHoptLo: 6.0, pHoptHi: 7.5, pHmax: 8.0, water: "low", lightSoils: true, heavySoils: false, season: "kharif" },
 ];
 
 function currentSeason(): "kharif" | "rabi" {
@@ -135,45 +203,130 @@ function currentSeason(): "kharif" | "rabi" {
   return m >= 6 && m <= 10 ? "kharif" : "rabi";
 }
 
-export function scoreCrops(ph: number, avgMoisture: number, season: "kharif" | "rabi"): CropFit[] {
-  return CROPS.map((c) => {
-    let score = 60;
-    const reasons: string[] = [];
+function classifyTexture(soilClass: string): "light" | "heavy" | "medium" {
+  const c = soilClass.toLowerCase();
+  // Order matters for compound names (e.g. "Coastal Alluvial Laterite"): black clay first,
+  // then alluvial (deposited fine sediments — rice-suitable), then genuinely light classes.
+  if (c.includes("black") || c.includes("cotton")) return "heavy";
+  if (c.includes("alluvial")) return "medium";
+  if (c.includes("sandy") || c.includes("laterite") || c.includes("red")) return "light";
+  return "medium"; // loam/podzol/other — suits nearly everything
+}
 
-    const pHok = ph >= c.pHmin && ph <= c.pHmax;
-    if (pHok) {
-      score += 15;
-      reasons.push("pH suits it");
+// FAO-EcoCrop-style suitability scoring.
+// The water signal deliberately blends two independent, complementary sources —
+// a single day's snapshot is NEVER the basis of a planting recommendation:
+//  (a) weight 0.6 — the state's 24-year rainfall climatology, split by season
+//      (IMD climatology: ~75% of annual rain arrives in the Jun–Sep SW monsoon,
+//      ~10% in the dry rabi half — the same split every year on average);
+//  (b) weight 0.4 — today's satellite-derived root-zone moisture (clamped so one
+//      dry or wet day can swing the total by at most ±~10 points).
+// Temperature uses the 24-year mean, not today's max — same principle.
+export function scoreCrops(
+  ph: number,
+  observedRootZone: number,
+  season: "kharif" | "rabi",
+  stateName: string
+): CropFit[] {
+  const climate = getStateClimate(stateName);
+  const wetMm = climate.annualRainMm * 0.75; // SW-monsoon share of annual rainfall (IMD climatology)
+  const dryMm = climate.annualRainMm * 0.10; // dry rabi half share
+  const seasonalRain = season === "kharif" ? wetMm : dryMm;
+  const fWaterSeasonal = Math.min(1.4, 0.55 + seasonalRain / 1000); // ≈0.63 (dry season, low-rain state) – ≈1.25 (monsoon, high-rain state)
+  const fWaterObserved = Math.max(0.55, Math.min(1.15, observedRootZone / 30)); // today's satellite moisture
+  const fWater = 0.6 * fWaterSeasonal + 0.4 * fWaterObserved;
+  const fTemp = Math.max(0.6, Math.min(1.05, 0.55 + (climate.meanTempC - 8) / 40)); // temperate states ≈0.7, plains ≈0.97–1.02
+
+  return CROPS.map((c) => {
+    // --- pH factor (FAO-EcoCrop: optimal range → 1.0, absolute range → 0.8, outside → decays to 0.4) ---
+    let fPH: number;
+    let labelPH: string;
+    if (ph >= c.pHoptLo && ph <= c.pHoptHi) {
+      fPH = 1.0;
+      labelPH = `pH ${ph} optimal`;
+    } else if (ph >= c.pHmin && ph <= c.pHmax) {
+      fPH = 0.8;
+      labelPH = `pH ${ph} acceptable`;
     } else {
       const dist = ph < c.pHmin ? c.pHmin - ph : ph - c.pHmax;
-      score -= Math.min(25, dist * 12);
-      reasons.push(dist > 0.8 ? "pH out of range" : "pH slightly off");
+      fPH = Math.max(0.4, 0.8 - dist * 0.5);
+      labelPH = dist > 0.8 ? `pH ${ph} unsuitable` : `pH ${ph} marginal`;
     }
+    const pHok = fPH >= 0.8;
 
-    const waterFit = avgMoisture >= (c.water === "high" ? 40 : c.water === "medium" ? 28 : 15);
-    if (waterFit) { score += 12; reasons.push(c.water === "low" ? "drought tolerant for dry soil" : "enough moisture"); }
-    else {
-      score -= 12;
-      reasons.push(c.water === "high" ? "needs more water than soil holds" : "moderate irrigation needed");
+    // --- Water factor: seasonal climatology + satellite moisture (blended above) ---
+    let fWaterCrop: number;
+    let labelWater: string;
+    if (c.water === "high") {
+      if (fWater >= 1.05) { fWaterCrop = 1.0; labelWater = "plenty of water"; }
+      else if (fWater >= 0.85) { fWaterCrop = 0.75; labelWater = "needs irrigation"; }
+      else { fWaterCrop = 0.45; labelWater = "too dry without irrigation"; }
+    } else if (c.water === "medium") {
+      if (fWater >= 0.9) { fWaterCrop = 1.0; labelWater = "water is adequate"; }
+      else if (fWater >= 0.7) { fWaterCrop = 0.8; labelWater = "light irrigation needed"; }
+      else { fWaterCrop = 0.55; labelWater = "dry season"; }
+    } else {
+      fWaterCrop = fWater >= 0.65 ? 1.0 : 0.85; // rainfed crops tolerate the dry signal
+      labelWater = fWater >= 0.65 ? "rainfed-friendly" : "drought-hardy";
     }
+    const waterOk = fWaterCrop >= 0.75;
 
-    const inSeason = c.season === season || c.season === "both";
-    if (inSeason) { score += 10; reasons.push("in-season now"); }
-    else score -= 15;
+    // --- Texture factor: sandy/loamy vs black clay, from the state soil class ---
+    const texture = classifyTexture(getStateSoil(stateName).class);
+    let fTexture: number;
+    let labelTexture: string;
+    if (texture === "light") {
+      if (c.lightSoils) { fTexture = 1.0; labelTexture = "light soil suits it"; }
+      else { fTexture = 0.6; labelTexture = "prefers heavier soil"; }
+    } else if (texture === "heavy") {
+      if (c.heavySoils) { fTexture = 1.0; labelTexture = "black soil suits it"; }
+      else { fTexture = 0.6; labelTexture = "prefers lighter soil"; }
+    } else {
+      fTexture = 0.95; // loam suits nearly everything
+      labelTexture = "loam suits it";
+    }
+    const textureOk = fTexture >= 0.9;
 
-    // Per-factor "why" chips — same conditions as the score math above, nothing new
-    const pHdist = ph < c.pHmin ? c.pHmin - ph : ph - c.pHmax;
+    // --- Season factor: hard multiplicative penalty (sowing out of season fights the climate) ---
+    let fSeason: number;
+    let labelSeason: string;
+    if (c.season === season || c.season === "both") {
+      fSeason = 1.0;
+      labelSeason = season === "kharif" ? "Kharif (monsoon) crop" : "Rabi (winter) crop";
+    } else {
+      fSeason = 0.5;
+      labelSeason = `sow in ${c.season === "kharif" ? "Kharif (Jun–Oct)" : "Rabi (Nov–Mar)"}`;
+    }
+    const seasonOk = fSeason === 1.0;
+
+    // --- Temperature factor (24-year mean from the 1997–2020 dataset, not today's reading) ---
+    const tempOk = fTemp >= 0.85;
+    const labelTemp = tempOk ? "temperature normal" : "cooler than ideal";
+
+    // Multiplicative aggregation — the EcoCrop principle: factors multiply, so one
+    // bad factor caps the score regardless of how good the others are.
+    const raw = 100 * fPH * fWaterCrop * fTexture * fSeason * fTemp;
+
     const factors: CropFactor[] = [
-      { label: pHok ? "pH fits" : pHdist > 0.8 ? "pH out of range" : "pH slightly off", ok: pHok },
-      { label: waterFit ? (c.water === "low" ? "low water need fits" : "moisture fits") : c.water === "high" ? "needs more water" : "needs some irrigation", ok: waterFit },
-      { label: inSeason ? "in season now" : `off-season (better in ${c.season === "kharif" ? "Kharif" : "Rabi"})`, ok: inSeason },
+      { label: labelPH, ok: pHok },
+      { label: labelWater, ok: waterOk },
+      { label: labelTexture, ok: textureOk },
+      { label: labelSeason, ok: seasonOk },
+      { label: labelTemp, ok: tempOk },
     ];
+
+    const reasons: string[] = [];
+    if (!pHok) reasons.push(labelPH);
+    if (!waterOk) reasons.push(labelWater);
+    if (!textureOk) reasons.push(labelTexture);
+    if (!seasonOk) reasons.push(labelSeason);
+    if (!tempOk) reasons.push(labelTemp);
 
     return {
       name: c.name,
       emoji: c.emoji,
-      score: Math.max(10, Math.min(98, Math.round(score))),
-      reason: reasons.join(" • "),
+      score: Math.max(10, Math.min(98, Math.round(raw))),
+      reason: reasons.length ? reasons.join(" • ") : "pH, soil texture, season and water all fit this plot",
       factors,
     };
   })
@@ -182,6 +335,11 @@ export function scoreCrops(ph: number, avgMoisture: number, season: "kharif" | "
 }
 
 // ---- Water-balance projection: daily moisture decay vs rain recharge ----
+// Simplified daily water balance (FAO Irrigation & Drainage Paper 56 approach):
+//   ΔS = P (effective rain) − ETc
+// where ETc = ET0 × Kc (crop coefficient) and ET0 is the FAO-56 Penman–Monteith
+// reference evapotranspiration from Open-Meteo. Here the balance is expressed as a
+// percentage of volumetric water content (VWC) for readability on the chart.
 export function projectMoisture(
   startMoisture: number,
   dailyRain: number[],
@@ -204,7 +362,11 @@ export function projectMoisture(
   return out;
 }
 
-// ---- Wilt threshold by soil class ----
+// ---- Permanent wilting point (PWP) by soil class, as % volumetric water content ----
+// Anchor: textbook VWC ranges for the wilting point (−1500 kPa matric potential):
+// sandy ≈ 10%, loamy ≈ 15%, clay-rich (black cotton) ≈ 20%. Each state's soil class
+// maps to the nearest of these; the -1500 kPа threshold is the standard agronomic
+// definition of "water a plant cannot extract" (FAO I&D Paper 56, ch. 5; Soil Survey Manual).
 const WILT_THRESHOLD: Record<string, number> = {
   "Red Laterite": 14, "Laterite": 14, "Red Sandy": 13, "Red Sandy Loam": 13,
   "Black Cotton": 20, "Deccan Black": 20, "Medium Black": 19,
@@ -427,7 +589,7 @@ async function fetchLiveTwin(
   const soil = getStateSoil(state);
   const season = currentSeason();
   const projection = projectMoisture(rootZone, rain7, et07, 1.0);
-  const crops = scoreCrops(soil.ph, rootZone, season);
+  const crops = scoreCrops(soil.ph, rootZone, season, state);
 
   const humidity = Math.round(cur?.relative_humidity_2m ?? 60);
   const airTemp = Math.round(cur?.temperature_2m ?? 28);
@@ -451,6 +613,13 @@ async function fetchLiveTwin(
     ph: soil.ph, nitrogen: soil.n, phosphorus: soil.p, potassium: soil.k,
     soilClass: soil.class,
     projection, advisories, crops,
+    dataSources: {
+      moistureModel: "Open-Meteo ECMWF/GFS soil analysis (satellite-derived, land-data-assimilated)",
+      moistureLayers: "Volumetric water content per depth layer, % — model grid value at your plot's centroid",
+      et0: "FAO-56 Penman–Monteith reference evapotranspiration (Open-Meteo)",
+      chemistry: `State-average from the Soil Health dataset (${state}) — not a measurement of your plot`,
+      climate: `24-year climatology (1997–2020) from state weather dataset (${state})`,
+    },
     fetchedAt: new Date().toISOString(),
     isEstimated: false,
   };
@@ -481,10 +650,12 @@ function buildEstimatedTwin(
 
   const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
-  // Root-zone base: wetter in monsoon, drier in winter; deterministic variation
-  const rootZone = Math.round(
-    ((monsoon ? 30 + seedRand(lat + daySeed) * 8 : 20 + seedRand(lon + daySeed) * 6)) * 10
-  ) / 10;
+  // Root-zone base from the 24-year climate (wetter states & monsoon season start wetter),
+  // plus deterministic day-to-day variation — no API involved.
+  const climate = getStateClimate(state);
+  const rainWetness = Math.min(1, climate.annualRainMm / 1500); // 0.5 (dry states) – 1 (wet states)
+  const baseWet = monsoon ? 26 + 8 * rainWetness : 16 + 6 * rainWetness;
+  const rootZone = Math.round(clamp(baseWet + (seedRand(lat + daySeed) - 0.5) * 6, 8, 44) * 10) / 10;
   const m0to1 = Math.round(clamp(rootZone + (monsoon ? 6 : -4) + seedRand(daySeed + 1) * 3, 6, 46) * 10) / 10;
   const m1to3 = rootZone;
   const m3to9 = Math.round(clamp(rootZone + 2 - seedRand(daySeed + 2) * 3, 6, 46) * 10) / 10;
@@ -497,7 +668,7 @@ function buildEstimatedTwin(
   });
 
   const projection = projectMoisture(rootZone, rain7, Array(7).fill(et0));
-  const crops = scoreCrops(soil.ph, rootZone, season);
+  const crops = scoreCrops(soil.ph, rootZone, season, state);
 
   const humidity = monsoon ? 82 : 45;
   const airTemp = monsoon ? 29 : 31;
@@ -520,6 +691,13 @@ function buildEstimatedTwin(
     ph: soil.ph, nitrogen: soil.n, phosphorus: soil.p, potassium: soil.k,
     soilClass: soil.class,
     projection, advisories, crops,
+    dataSources: {
+      moistureModel: "Climate-based estimate (Open-Meteo temporarily unavailable)",
+      moistureLayers: "Volumetric water content per depth layer, % — estimated, not measured",
+      et0: "Seasonal-typical FAO-56 ET0 (monsoon/winter), not today's value",
+      chemistry: `State-average from the Soil Health dataset (${state}) — not a measurement of your plot`,
+      climate: `24-year climatology (1997–2020) from state weather dataset (${state})`,
+    },
     fetchedAt: new Date().toISOString(),
     isEstimated: true,
   };
