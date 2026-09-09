@@ -1,8 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Store, Search, Camera, Image, MapPin, Star, MessageCircle, Package, ArrowRight, X, Send, Filter } from "lucide-react";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useAuth } from "../contexts/AuthContext";
+import { useLocation } from "../contexts/LocationContext";
 import { createOrder } from "../lib/supabaseData";
+import { fetchMarketplace, type MarketProduct } from "../lib/customerData";
+import { productPhoto, productEmoji } from "../lib/productPhotos";
 
 interface ProduceListing {
   id: string;
@@ -45,7 +48,8 @@ const CROPS = ["All", "Paddy", "Tomato", "Mustard", "Potato", "Maize", "Brinjal"
 export default function MarketplacePage() {
   const { t } = useLanguage();
   const { user } = useAuth();
-  const [listings] = useState<ProduceListing[]>(MOCK_LISTINGS);
+  const loc = useLocation();
+  const [listings, setListings] = useState<ProduceListing[]>(MOCK_LISTINGS);
   const [filter, setFilter] = useState("All");
   const [search, setSearch] = useState("");
   const [selectedListing, setSelectedListing] = useState<ProduceListing | null>(null);
@@ -57,6 +61,51 @@ export default function MarketplacePage() {
   const [showPostForm, setShowPostForm] = useState(false);
   const [placingId, setPlacingId] = useState<string | null>(null);
   const [placedIds, setPlacedIds] = useState<Record<string, boolean>>({});
+
+  // Real farmer listings from farmer_inventory (what farmers add via
+  // Farm to Product / Sell on Marketplace) appear here alongside the
+  // showcase samples. Refreshes when a farmer lists something.
+  const loadRealListings = () => {
+    fetchMarketplace(loc.city || "")
+      .then((products: MarketProduct[]) => {
+        const real: ProduceListing[] = products.map((p) => ({
+          id: `real-${p.id}`,
+          sellerName: p.listing.name,
+          sellerType: "farmer" as const,
+          sellerVerified: p.listing.dealsCount > 20,
+          crop: p.productName,
+          quantity: p.availableKg,
+          unit: "kg",
+          grade: (p.row.grade as "A" | "B" | "C") || "B",
+          pricePerKg: p.pricePerKg,
+          location: [p.listing.village, p.listing.city].filter(Boolean).join(", ") || p.listing.city || "Local farmer",
+          distance: "",
+          imageUrl: productPhoto(p.productName)?.photo || "",
+          description: p.type === "processed"
+            ? `Homemade processed product by ${p.listing.name} — Grade ${p.row.grade} quality. Contact to order.`
+            : `Freshly harvested ${p.productName.toLowerCase()} by ${p.listing.name} — Grade ${p.row.grade} quality, ${p.availableKg} kg available.`,
+          postedDate: "Live listing",
+          status: p.availableKg > 0 ? ("available" as const) : ("reserved" as const),
+          rating: p.listing.rating,
+        }));
+        if (real.length > 0) {
+          setListings((prev) => [
+            ...real,
+            // replace any previously loaded real listings (dedupe on refocus)
+            ...prev.filter((p) => !p.id.startsWith("real-")),
+          ]);
+        }
+      })
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    loadRealListings();
+    const onFocus = () => loadRealListings();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loc.city]);
 
   const filtered = listings.filter((l) => {
     const matchCrop = filter === "All" || l.crop.includes(filter);
@@ -147,21 +196,25 @@ export default function MarketplacePage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {filtered.map((listing) => (
             <div key={listing.id} className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-              <div className="relative h-44 bg-slate-900">
-                <img
-                  src={listing.imageUrl}
-                  alt={listing.crop}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    const img = e.currentTarget;
-                    if (!img.dataset.fb) {
-                      img.dataset.fb = "1";
-                      img.src = "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&auto=format&fit=crop&q=80";
-                    } else {
-                      img.style.visibility = "hidden";
-                    }
-                  }}
-                />
+              <div className="relative h-44 bg-gradient-to-br from-emerald-900 to-slate-900 flex items-center justify-center">
+                {listing.imageUrl ? (
+                  <img
+                    src={listing.imageUrl}
+                    alt={listing.crop}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      const img = e.currentTarget;
+                      if (!img.dataset.fb) {
+                        img.dataset.fb = "1";
+                        img.src = "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&auto=format&fit=crop&q=80";
+                      } else {
+                        img.style.visibility = "hidden";
+                      }
+                    }}
+                  />
+                ) : (
+                  <span className="text-6xl">{productEmoji(listing.crop)}</span>
+                )}
                 <div className="absolute top-3 left-3 flex gap-1.5">
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${GRADE_COLORS[listing.grade]}`}>
                     Grade {listing.grade}

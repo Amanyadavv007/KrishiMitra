@@ -11,6 +11,9 @@
     "kb:ingest": "bun scripts/ingest-kb.mjs"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.1",
+    "@capacitor/cli": "^8.5.1",
+    "@capacitor/core": "^8.5.1",
     "@supabase/supabase-js": "^2.114.0",
     "@types/leaflet": "^1.9.22",
     "axios": "^1.7.9",
