@@ -5,6 +5,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useCart } from "../contexts/CartContext";
 import { fetchMarketplace, type MarketProduct } from "../lib/customerData";
 import { useLocation } from "../contexts/LocationContext";
+import riceFieldBg from "../assets/rice-field.jpg"; // same live wallpaper as farmer/merchant landing
 
 /**
  * Customer landing page (/shop) — the customer's home inside the app.
@@ -48,39 +49,81 @@ export default function CustomerLandingPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Hero */}
-      <section className="bg-gradient-to-br from-amber-50 via-orange-50 to-emerald-50 border-b border-amber-100">
-        <div className="max-w-7xl mx-auto px-4 py-10 sm:py-14">
+      {/* Hero — identical live rice-field background as the farmer/merchant landing pages */}
+      <section className="relative overflow-hidden text-white pt-0 pb-16 px-4">
+        {/* SVG filter that makes the photo's crops sway (unique id per page) */}
+        <svg width="0" height="0" style={{ position: "absolute" }}>
+          <filter id="customerCropWave" x="-20%" y="-20%" width="140%" height="140%">
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency="0.006 0.012"
+              numOctaves={2}
+              seed={7}
+              result="noise"
+            >
+              <animate
+                attributeName="baseFrequency"
+                dur="14s"
+                values="0.006 0.012;0.009 0.016;0.006 0.012"
+                repeatCount="indefinite"
+              />
+            </feTurbulence>
+            <feDisplacementMap in="SourceGraphic" in2="noise" scale={18} xChannelSelector="R" yChannelSelector="G" />
+          </filter>
+        </svg>
+
+        {/* Live background photo (Ken-Burns zoom + wavy filter) — same as farmer/merchant */}
+        <div
+          className="absolute inset-0 motion-safe:animate-[breathe_22s_ease-in-out_infinite_alternate]"
+          style={{
+            backgroundImage: `url(${riceFieldBg})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center 55%",
+            filter: "url(#customerCropWave) saturate(1.28) brightness(1.12) hue-rotate(12deg)",
+            willChange: "transform",
+          }}
+        />
+
+        {/* Same scrim as farmer/merchant hero */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(6,46,33,0.68) 0%, rgba(6,78,59,0.52) 45%, rgba(5,46,22,0.70) 100%)",
+          }}
+        />
+
+        <div className="relative z-10 max-w-7xl mx-auto pt-10">
           <div className="max-w-2xl">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-amber-200 text-amber-700 text-[11px] font-bold tracking-wide shadow-sm">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/30 border border-amber-300/30 text-amber-100 text-[11px] font-bold tracking-widest uppercase">
               <Sparkles className="w-3.5 h-3.5" />
-              FARM-TO-HOME MARKETPLACE
+              Farm-to-Home Marketplace
             </span>
-            <h1 className="mt-4 text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
+            <h1 className="mt-4 text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight">
               Namaste{user?.name ? `, ${user.name}` : ""}! 👋
             </h1>
-            <p className="mt-2 text-sm sm:text-base text-slate-600 leading-relaxed">
+            <p className="mt-2 text-sm sm:text-base text-emerald-100 leading-relaxed">
               Buy fresh vegetables, fruits, honey, pickles and more — directly from
               farmers near you. No middlemen, fair prices, farm-fresh quality.
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
               <button
                 onClick={() => navigate("/shop/marketplace")}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold shadow-md shadow-amber-200 cursor-pointer transition-colors"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-white text-sm font-bold shadow-lg shadow-emerald-900/40 cursor-pointer transition-colors"
               >
                 <ShoppingBag className="w-4 h-4" />
                 Browse Marketplace
               </button>
               <button
                 onClick={() => navigate("/shop/farmers")}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white hover:bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-bold cursor-pointer transition-colors"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/30 text-white text-sm font-bold cursor-pointer transition-colors backdrop-blur-sm"
               >
                 <HeartHandshake className="w-4 h-4" />
                 Meet Your Farmers
               </button>
             </div>
             {totalItems > 0 && (
-              <p className="mt-3 text-xs text-amber-700 font-semibold">
+              <p className="mt-3 text-xs text-amber-200 font-semibold">
                 🛒 {totalItems} item{totalItems > 1 ? "s" : ""} waiting in your cart —{" "}
                 <button onClick={() => navigate("/shop/orders")} className="underline cursor-pointer">
                   go to cart
