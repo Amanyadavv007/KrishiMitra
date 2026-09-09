@@ -58,6 +58,8 @@ export const EXTRA_KEYS: Record<string, Record<string, string>> = {
     quantityLabel: "QUANTITY",
     gradeCol: "GRADE",
     storageLabel: "STORAGE",
+    customerBazaar: "Customer Bazaar",
+    customerBazaarDesc: "Pre-order pooled produce from collection points",
     harvestDateLabel: "HARVEST DATE",
     pricePerKgLabel: "PRICE/KG",
     aiSuggestedLabel: "AI SUGGESTED",

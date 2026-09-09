@@ -109,7 +109,9 @@ export default function RegisterPage() {
           <p className="text-xs text-slate-500 mt-1">AgriNexus par register karein</p>
           <span
             className={`inline-flex items-center gap-1.5 mt-2.5 px-3 py-1 rounded-full text-[10px] font-bold tracking-wide ${
-              asMerchant
+              asCustomer
+                ? "bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-200"
+                : asMerchant
                 ? "bg-violet-50 text-violet-700 border border-violet-200"
                 : asCustomer
                   ? "bg-amber-50 text-amber-700 border border-amber-200"

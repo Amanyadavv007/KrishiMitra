@@ -98,6 +98,9 @@ function usePreloadCoreRoutes() {
   }, []);
 }
 
+// Customer Dashboard — pooled supply chain
+import CustomerDashboard from "./pages/CustomerDashboard";
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -280,6 +283,9 @@ function AppShell() {
                       <Route path="/mandi-prices" element={<MandiPricePage />} />
                       <Route path="/marketplace" element={<MarketplacePage />} />
                       <Route path="/supply-chain" element={<SupplyChainPage />} />
+
+                      {/* Customer Dashboard — pooled supply chain (open showcase) */}
+                      <Route path="/customer" element={<CustomerDashboard />} />
                     </Routes>
                   </Suspense>
                 </main>                <Footer />
