@@ -5,6 +5,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useLanguage } from "../../contexts/LanguageContext";
 import LanguageSelector from "../common/LanguageSelector";
 import NotificationBell from "../common/NotificationBell";
+import MinistryLogo from "../common/MinistryLogo";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -18,8 +19,12 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
 
-          {/* LEFT: Logo — AgriNexus */}
+          {/* LEFT: Ministry emblem + AgriNexus branding */}
           <Link to="/" className="flex items-center gap-2.5">
+            <span className="hidden sm:inline-flex">
+              <MinistryLogo className="h-7 w-auto" />
+            </span>
+            <span className="w-px self-stretch my-2 bg-slate-200" aria-hidden="true" />
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-green-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
               <Sprout className="w-5 h-5" />
             </div>

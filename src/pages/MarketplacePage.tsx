@@ -34,10 +34,10 @@ interface Message {
 }
 
 const MOCK_LISTINGS: ProduceListing[] = [
-  { id: "1", sellerName: "Ramesh Kumar", sellerType: "farmer", sellerVerified: true, crop: "Paddy (Swarna)", quantity: 45, unit: "quintal", grade: "A", pricePerKg: 22.5, location: "Cuttack, Odisha", distance: "12 km", imageUrl: "https://images.unsplash.com/photo-1536657464919-892534f60d7e?w=400&auto=format&fit=crop&q=80", description: "Premium long grain paddy, freshly harvested. Well-dried, moisture < 14%.", postedDate: "Today", status: "available", rating: 4.8 },
+  { id: "1", sellerName: "Ramesh Kumar", sellerType: "farmer", sellerVerified: true, crop: "Paddy (Swarna)", quantity: 45, unit: "quintal", grade: "A", pricePerKg: 22.5, location: "Cuttack, Odisha", distance: "12 km", imageUrl: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&auto=format&fit=crop&q=80", description: "Premium long grain paddy, freshly harvested. Well-dried, moisture < 14%.", postedDate: "Today", status: "available", rating: 4.8 },
   { id: "2", sellerName: "Suresh Agro Farm", sellerType: "farmer", sellerVerified: true, crop: "Tomato (Hybrid)", quantity: 800, unit: "kg", grade: "B", pricePerKg: 18, location: "Pune, Maharashtra", distance: "5 km", imageUrl: "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=400&auto=format&fit=crop&q=80", description: "Fresh hybrid tomato, slight color variation. Best for processing.", postedDate: "Yesterday", status: "available", rating: 4.5 },
   { id: "3", sellerName: "Priya Mustard Farm", sellerType: "farmer", sellerVerified: false, crop: "Mustard", quantity: 12, unit: "quintal", grade: "A", pricePerKg: 55, location: "Ludhiana, Punjab", distance: "8 km", imageUrl: "https://images.unsplash.com/photo-1615811361523-6bd03d7748e7?w=400&auto=format&fit=crop&q=80", description: "Premium yellow mustard seeds. High oil content, well-cleaned.", postedDate: "2 days ago", status: "available", rating: 4.9 },
-  { id: "4", sellerName: "Green Valley Traders", sellerType: "trader", sellerVerified: true, crop: "Potato", quantity: 200, unit: "quintal", grade: "A", pricePerKg: 14.5, location: "Agra, UP", distance: "15 km", imageUrl: "https://images.unsplash.com/photo-1518977676601-b53f82ber?w=400&auto=format&fit=crop&q=80", description: "Fresh Jyoti variety potatoes, uniform size, well-washed.", postedDate: "Today", status: "available", rating: 4.3 },
+  { id: "4", sellerName: "Green Valley Traders", sellerType: "trader", sellerVerified: true, crop: "Potato", quantity: 200, unit: "quintal", grade: "A", pricePerKg: 14.5, location: "Agra, UP", distance: "15 km", imageUrl: "https://images.unsplash.com/photo-1590165482129-1b8b27698780?w=400&auto=format&fit=crop&q=80", description: "Fresh Jyoti variety potatoes, uniform size, well-washed.", postedDate: "Today", status: "available", rating: 4.3 },
   { id: "5", sellerName: "Karnataka Maize Co.", sellerType: "trader", sellerVerified: true, crop: "Maize", quantity: 50, unit: "quintal", grade: "A", pricePerKg: 18.5, location: "Bengaluru, Karnataka", distance: "20 km", imageUrl: "https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=400&auto=format&fit=crop&q=80", description: "Hybrid maize, high test weight, moisture 12%. Ready for immediate dispatch.", postedDate: "Today", status: "available", rating: 4.6 },
   { id: "6", sellerName: "Anita Reddy Farm", sellerType: "farmer", sellerVerified: true, crop: "Brinjal (Round)", quantity: 300, unit: "kg", grade: "A", pricePerKg: 25, location: "Hyderabad, Telangana", distance: "3 km", imageUrl: "https://images.unsplash.com/photo-1615484477778-ca3b77940c25?w=400&auto=format&fit=crop&q=80", description: "Fresh round brinjal, uniform purple color, no pest damage.", postedDate: "Yesterday", status: "available", rating: 4.7 },
 ];
@@ -198,7 +198,20 @@ export default function MarketplacePage() {
             <div key={listing.id} className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
               <div className="relative h-44 bg-gradient-to-br from-emerald-900 to-slate-900 flex items-center justify-center">
                 {listing.imageUrl ? (
-                  <img src={listing.imageUrl} alt={listing.crop} className="w-full h-full object-cover" />
+                  <img
+                    src={listing.imageUrl}
+                    alt={listing.crop}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      const img = e.currentTarget;
+                      if (!img.dataset.fb) {
+                        img.dataset.fb = "1";
+                        img.src = "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&auto=format&fit=crop&q=80";
+                      } else {
+                        img.style.visibility = "hidden";
+                      }
+                    }}
+                  />
                 ) : (
                   <span className="text-6xl">{productEmoji(listing.crop)}</span>
                 )}
