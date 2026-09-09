@@ -99,6 +99,9 @@ function usePreloadCoreRoutes() {
   }, []);
 }
 
+// Customer Dashboard — pooled supply chain
+import CustomerDashboard from "./pages/CustomerDashboard";
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -283,6 +286,9 @@ function AppShell() {
                       <Route path="/supply-chain" element={<SupplyChainPage />} />
                       {/* Feature A: process produce into value-added products */}
                       <Route path="/process" element={<ProcessProducePage />} />
+
+                      {/* Customer Dashboard — pooled supply chain (open showcase) */}
+                      <Route path="/customer" element={<CustomerDashboard />} />
                     </Routes>
                   </Suspense>
                 </main>                <Footer />
