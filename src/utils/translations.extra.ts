@@ -3,6 +3,8 @@
 
 export const EXTRA_KEYS: Record<string, Record<string, string>> = {
   en: {
+    // Feature A — Farm to Product
+    farmToProduct: "Farm to Product",
     // Dashboard
     greeting: "Namaste",
     scanCrop: "Scan Crop",
@@ -115,6 +117,7 @@ export const EXTRA_KEYS: Record<string, Record<string, string>> = {
     advisoryFavorable: "Favorable weather for field preparation and weeding. No heavy rainfall expected.",
   },
   hi: {
+    farmToProduct: "खेत से उत्पाद",
     greeting: "नमस्ते",
     scanCrop: "फसल स्कैन करें",
     postIssue: "समस्या दर्ज करें",
@@ -218,6 +221,7 @@ export const EXTRA_KEYS: Record<string, Record<string, string>> = {
     advisoryFavorable: "खेत की तैयारी और निराई के लिए अनुकूल मौसम। कोई भारी बारिश नहीं।",
   },
   bn: {
+    farmToProduct: "খামার থেকে পণ্য",
     greeting: "নমস্কার",
     scanCrop: "ফসল স্ক্যান করুন",
     postIssue: "সমস্যা দাখিল করুন",
@@ -321,6 +325,7 @@ export const EXTRA_KEYS: Record<string, Record<string, string>> = {
     advisoryFavorable: "মাঠের প্রস্তুতি ও তুলার জন্য অনুকূল আবহাওয়া। ভারী বৃষ্টির সম্ভাবনা নেই।",
   },
   te: {
+    farmToProduct: "పొలం నుండి ఉత్పత్తి",
     greeting: "నమస్తే",
     scanCrop: "పంత స్కాన్ చేయండి",
     postIssue: "సమస్య నమోదు చేయండి",
@@ -424,6 +429,7 @@ export const EXTRA_KEYS: Record<string, Record<string, string>> = {
     advisoryFavorable: "పొలం సిద్ధం చేయడానికి మరియు కలుపు తీయడానికి అనుకూల వాతావరణం.",
   },
   ta: {
+    farmToProduct: "பண்ணையில் இருந்து பொருள்",
     greeting: "வணக்கம்",
     scanCrop: "பயிர் ஸ்கேன் செய்யுங்கள்",
     postIssue: "பிரச்சனை பதிவு செய்யுங்கள்",
@@ -527,6 +533,7 @@ export const EXTRA_KEYS: Record<string, Record<string, string>> = {
     advisoryFavorable: "நிலத்தை தயார் செய்ய மற்றும் களை எடுக்க ஏற்ற வானிலை.",
   },
   kn: {
+    farmToProduct: "ಹೊಲದಿಂದ ಉತ್ಪನ್ನ",
     greeting: "ನಮಸ್ಕಾರ",
     scanCrop: "ಬೆಳೆ ಸ್ಕ್ಯಾನ್ ಮಾಡಿ",
     postIssue: "ಸಮಸ್ಯೆ ದಾಖಲಿಸಿ",
@@ -630,6 +637,7 @@ export const EXTRA_KEYS: Record<string, Record<string, string>> = {
     advisoryFavorable: "ಹೊಲ ಸಿದ್ಧಪಡಿಸಲು ಮತ್ತು ಕಳೆ ತೆಗೆಯಲು ಅನುಕೂಲಕರ ಹವಾಮಾನ.",
   },
   mr: {
+    farmToProduct: "शेतातून उत्पादन",
     greeting: "नमस्कार",
     scanCrop: "पिक स्कॅन करा",
     postIssue: "समस्या नोंदवा",

@@ -78,7 +78,7 @@ export default function ProcessProducePage() {
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-500 text-white flex items-center justify-center mx-auto mb-3 shadow-lg shadow-amber-500/30">
             <ChefHat className="w-7 h-7" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Process Your Produce</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Farm to Product</h1>
           <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
             Turn your raw harvest into value-added products — chips, pickles, flour and more — and sell them directly at a much higher price.
           </p>

@@ -6,6 +6,7 @@ import { useCart } from "../contexts/CartContext";
 import { fetchMarketplace, type MarketProduct } from "../lib/customerData";
 import { useLocation } from "../contexts/LocationContext";
 import riceFieldBg from "../assets/rice-field.jpg"; // same live wallpaper as farmer/merchant landing
+import { productPhoto } from "../lib/productPhotos";
 
 /**
  * Customer landing page (/shop) — the customer's home inside the app.
@@ -144,9 +145,9 @@ export default function CustomerLandingPage() {
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-52 rounded-2xl bg-white border border-slate-200/80 animate-pulse" />
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-40 rounded-2xl bg-white border border-slate-200/80 animate-pulse" />
             ))}
           </div>
         ) : featured.length === 0 ? (
@@ -154,29 +155,41 @@ export default function CustomerLandingPage() {
             No products listed near you yet — check back soon!
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {featured.map((p) => (
-              <Link
-                key={p.id}
-                to="/shop/marketplace"
-                className="group bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm hover:shadow-md hover:border-amber-200 transition-all"
-              >
-                <div className="w-full aspect-square rounded-xl bg-gradient-to-br from-amber-50 to-emerald-50 flex items-center justify-center text-4xl mb-3">
-                  {p.emoji}
-                </div>
-                <h3 className="text-sm font-bold text-slate-900 group-hover:text-amber-700 transition-colors truncate">
-                  {p.productName}
-                </h3>
-                <p className="text-[11px] text-slate-500 truncate">👨‍🌾 {p.listing.name}</p>
-                <div className="flex items-center justify-between mt-2">
-                  <span className="text-sm font-extrabold text-slate-900">₹{p.pricePerKg}/{p.unitLabel === "kg" ? "kg" : "pack"}</span>
-                  <span className="flex items-center gap-0.5 text-[11px] font-bold text-amber-600">
-                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                    {p.listing.rating}
-                  </span>
-                </div>
-              </Link>
-            ))}
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+            {featured.map((p) => {
+              const img = productPhoto(p.productName);
+              return (
+                <Link
+                  key={p.id}
+                  to="/shop/marketplace"
+                  className="group bg-white rounded-2xl border border-slate-200/80 p-2.5 shadow-sm hover:shadow-md hover:border-amber-200 transition-all"
+                >
+                  {img ? (
+                    <img
+                      src={img.photo}
+                      alt={p.productName}
+                      loading="lazy"
+                      className="w-full aspect-square rounded-xl object-cover mb-2"
+                    />
+                  ) : (
+                    <div className="w-full aspect-square rounded-xl bg-gradient-to-br from-amber-50 to-emerald-50 flex items-center justify-center text-3xl mb-2">
+                      {p.emoji}
+                    </div>
+                  )}
+                  <h3 className="text-xs font-bold text-slate-900 group-hover:text-amber-700 transition-colors truncate">
+                    {p.productName}
+                  </h3>
+                  <p className="text-[10px] text-slate-500 truncate">👨‍🌾 {p.listing.name}</p>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-xs font-extrabold text-slate-900">₹{p.pricePerKg}/{p.unitLabel === "kg" ? "kg" : "pack"}</span>
+                    <span className="flex items-center gap-0.5 text-[10px] font-bold text-amber-600">
+                      <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
+                      {p.listing.rating}
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         )}
       </section>

@@ -63,7 +63,7 @@ export default function Navbar() {
                       {t("mandiBhaav")}
                     </Link>
                     <Link to="/process" onClick={() => setMarketOpen(false)} className="block px-3 py-2.5 rounded-xl hover:bg-amber-50 text-xs font-semibold text-slate-800 transition-colors">
-                      🏭 Process Produce
+                      🏭 {t("farmToProduct")}
                     </Link>
                     <Link to="/marketplace" onClick={() => setMarketOpen(false)} className="block px-3 py-2.5 rounded-xl hover:bg-emerald-50 text-xs font-semibold text-slate-800 transition-colors">
                       {t("kisaanBazaar")}
