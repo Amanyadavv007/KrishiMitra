@@ -8,24 +8,6 @@
       href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍾</text></svg>"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-    <script>
-      // KrishiMitra app wrapper: when running inside the native app, the
-      // WebView identifies itself via its user-agent marker. We then switch
-      // to a desktop viewport (width=1280, zoom-to-fit) so the app shows
-      // the EXACT same layout as the website on a laptop. In normal
-      // browsers this block does nothing at all.
-      (function () {
-        try {
-          if (/KrishiMitraApp/i.test(navigator.userAgent)) {
-            var m = document.querySelector('meta[name="viewport"]');
-            if (m) m.setAttribute('content', 'width=1280, initial-scale=0.24');
-            document.documentElement.classList.add('km-app');
-          }
-        } catch (e) {
-          /* never block page load */
-        }
-      })();
-    </script>
     <title>AgriNexus | Smart Agriculture Platform द्रम्म्र যশ্ষিমিত্র</title>
     <!-- Paint the page background instantly before CSS/JS arrive -->
     <style>

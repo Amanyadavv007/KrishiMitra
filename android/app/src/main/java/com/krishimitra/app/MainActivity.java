@@ -3,7 +3,6 @@ package com.krishimitra.app;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.webkit.WebSettings;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -19,8 +18,6 @@ public class MainActivity extends BridgeActivity {
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
 
-    configureWebView();
-
     // Ask for the runtime permissions the website's features need ONCE at
     // startup (crop-scan camera, GPS weather, voice assistant). Every
     // permission has a graceful denied-path inside the web app, so a
@@ -33,28 +30,6 @@ public class MainActivity extends BridgeActivity {
         Manifest.permission.RECORD_AUDIO
       };
       requestIfNeeded(wanted);
-    }
-  }
-
-  /**
-   * Desktop-look setup: tag the WebView user-agent with "KrishiMitraApp"
-   * (the site's index.html detects this and switches to a width=1280
-   * desktop viewport) and enable the wide viewport so the desktop layout
-   * zooms-to-fit the phone screen — the app then looks exactly like the
-   * website on a laptop.
-   */
-  private void configureWebView() {
-    try {
-      if (this.bridge == null || this.bridge.getWebView() == null) return;
-      WebSettings s = this.bridge.getWebView().getSettings();
-      String ua = s.getUserAgentString();
-      if (ua != null && !ua.contains("KrishiMitraApp")) {
-        s.setUserAgentString(ua + " KrishiMitraApp");
-      }
-      s.setLoadWithOverviewMode(true);
-      s.setUseWideViewPort(true);
-    } catch (Exception e) {
-      // Cosmetic tweak only — never crash the app over it.
     }
   }
 
