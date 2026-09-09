@@ -5,6 +5,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useLocation as useGeoLocation } from "../contexts/LocationContext";
 import { useLanguage } from "../contexts/LanguageContext";
 import CameraCaptureModal from "../components/camera/CameraCaptureModal";
+import GovernmentSchemesCard from "../components/dashboard/GovernmentSchemesCard";
 import api from "../services/api";
 import { fetchInventory, fetchOrders, subscribeInventory, InventoryRow, OrderRow } from "../lib/supabaseData";
 
@@ -210,8 +211,8 @@ export default function FarmerDashboard() {
           </div>
         </div>
 
-        {/* Recent Diagnoses */}
-        <div>
+        {/* Recent Diagnoses (left) + Government Schemes (right) — 50/50 split */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-bold text-slate-900">{t("recentDiagnoses")}</h2>
@@ -235,6 +236,8 @@ export default function FarmerDashboard() {
               </div>
             )}
           </div>
+
+          <GovernmentSchemesCard />
         </div>
       </div>
 
