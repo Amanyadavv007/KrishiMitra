@@ -533,6 +533,9 @@ export const EXTRA_KEYS: Record<string, Record<string, string>> = {
     advisoryFavorable: "நிலத்தை தயார் செய்ய மற்றும் களை எடுக்க ஏற்ற வானிலை.",
   },
   kn: {
+    healthySoil: "ಆರೋಗ್ಯಕರ ಮಣ್ಣು",
+    betterCrops: "ಉತ್ತಮ ಬೆಳೆಗಳು",
+    brighterFuture: "ಪ್ರಕಾಶಮಾನ ಭವಿಷ್ಯ",
     farmToProduct: "ಹೊಲದಿಂದ ಉತ್ಪನ್ನ",
     greeting: "ನಮಸ್ಕಾರ",
     scanCrop: "ಬೆಳೆ ಸ್ಕ್ಯಾನ್ ಮಾಡಿ",
@@ -637,6 +640,9 @@ export const EXTRA_KEYS: Record<string, Record<string, string>> = {
     advisoryFavorable: "ಹೊಲ ಸಿದ್ಧಪಡಿಸಲು ಮತ್ತು ಕಳೆ ತೆಗೆಯಲು ಅನುಕೂಲಕರ ಹವಾಮಾನ.",
   },
   mr: {
+    healthySoil: "निरोगी माती",
+    betterCrops: "उत्तम पीक",
+    brighterFuture: "उज्ज्वल भविष्य",
     farmToProduct: "शेतातून उत्पादन",
     greeting: "नमस्कार",
     scanCrop: "पिक स्कॅन करा",
@@ -741,6 +747,9 @@ export const EXTRA_KEYS: Record<string, Record<string, string>> = {
     advisoryFavorable: "शेत तयार करण्यासाठी आणि गवत काढण्यासाठी अनुकूल हवामान.",
   },
   or: {
+    healthySoil: "ସ୍ୱାସ୍ଥ୍ୟକର ମାଟି",
+    betterCrops: "ଉନ୍ନତ ଫସଲ",
+    brighterFuture: "ଉଜ୍ଜ୍ୱଳ ଭବିଷ୍ୟତ",
     greeting: "ନମସ୍କାର",
     scanCrop: "ଫସଲ ସ୍କାନ୍ କରନ୍ତୁ",
     postIssue: "ସମସ୍ୟା ଦାଖଲ କରନ୍ତୁ",
