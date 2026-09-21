@@ -6,10 +6,17 @@ import {
   ThumbsUp, ThumbsDown, Flag, ShieldCheck,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import { useLanguage } from "../contexts/LanguageContext";
 import {
   SCHEMES, matchSchemes, assessDocuments, loadSchemes, loadFeedback, saveFeedback,
   type Scheme, type SchemeMatch, type DocStatus, type FarmerProfile,
 } from "../lib/schemesData";
+
+/** Interpolate {param} placeholders from the engine into a translated string */
+function interp(tpl: string, params?: Record<string, string | number>): string {
+  if (!params) return tpl;
+  return tpl.replace(/\{(\w+)\}/g, (_, k) => String(params[k] ?? `{${k}}`));
+}
 
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
@@ -19,6 +26,7 @@ function Card({ children, className = "" }: { children: React.ReactNode; classNa
 
 /** Phase 2: have/missing checklist with profile links for fixable docs */
 function DocumentChecklist({ docs }: { docs: DocStatus[] }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const haveCount = docs.filter((d) => d.have).length;
   const allHave = haveCount === docs.length;
@@ -35,7 +43,7 @@ function DocumentChecklist({ docs }: { docs: DocStatus[] }) {
           ) : (
             <FileWarning className="w-3.5 h-3.5 text-amber-500" />
           )}
-          Documents: {haveCount}/{docs.length} ready
+          {t("docsReady")} {haveCount}/{docs.length} {t("ready")}
         </span>
         {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
       </button>
@@ -50,18 +58,18 @@ function DocumentChecklist({ docs }: { docs: DocStatus[] }) {
               )}
               <div className="min-w-0">
                 <p className={`font-semibold leading-snug ${d.have ? "text-slate-700" : "text-slate-800"}`}>
-                  {d.doc} {d.have ? "— ready" : "— missing"}
+                  {d.doc} {d.have ? `— ${t("ready")}` : `— ${t("missing")}`}
                 </p>
                 {!d.have && d.fixPath && (
                   <Link
                     to={d.fixPath}
                     className="inline-flex items-center gap-1 mt-0.5 text-[11px] font-bold text-emerald-600 hover:underline"
                   >
-                    <UserPlus className="w-3 h-3" /> {d.fixLabel} →
+                    <UserPlus className="w-3 h-3" /> {d.fixCode ? t(d.fixCode) : d.fixLabel} →
                   </Link>
                 )}
                 {!d.have && !d.fixPath && d.fixLabel && (
-                  <p className="text-[11px] text-slate-500 mt-0.5">{d.fixLabel}</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">{d.fixCode ? t(d.fixCode) : d.fixLabel}</p>
                 )}
               </div>
             </li>
@@ -74,6 +82,7 @@ function DocumentChecklist({ docs }: { docs: DocStatus[] }) {
 
 /** Phase 4: "received benefits?" question — optional, skippable (answer is never required) */
 function BenefitsQuestion({ schemeId, farmerId }: { schemeId: string; farmerId: string }) {
+  const { t } = useLanguage();
   const [value, setValue] = useState<boolean | null>(null);
   const [dismissed, setDismissed] = useState(false);
 
@@ -90,10 +99,10 @@ function BenefitsQuestion({ schemeId, farmerId }: { schemeId: string; farmerId: 
   if (dismissed) return null;
   return (
     <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap items-center gap-2">
-      <span className="text-[11px] font-semibold text-slate-500">Did you receive benefits from this scheme?</span>
+      <span className="text-[11px] font-semibold text-slate-500">{t("didYouReceive")}</span>
       {value !== null && (
         <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1">
-          <ShieldCheck className="w-3 h-3" /> saved
+          <ShieldCheck className="w-3 h-3" /> {t("saved")}
         </span>
       )}
       <div className="flex items-center gap-1.5">
@@ -108,7 +117,7 @@ function BenefitsQuestion({ schemeId, farmerId }: { schemeId: string; farmerId: 
               : "bg-white border-slate-200 text-slate-600 hover:border-emerald-300 hover:text-emerald-700"
           }`}
         >
-          <ThumbsUp className="w-3 h-3" /> Yes
+          <ThumbsUp className="w-3 h-3" /> {t("yes")}
         </button>
         <button
           onClick={async () => {
@@ -121,7 +130,7 @@ function BenefitsQuestion({ schemeId, farmerId }: { schemeId: string; farmerId: 
               : "bg-white border-slate-200 text-slate-600 hover:border-amber-300 hover:text-amber-700"
           }`}
         >
-          <ThumbsDown className="w-3 h-3" /> No
+          <ThumbsDown className="w-3 h-3" /> {t("no")}
         </button>
         <button
           onClick={() => setDismissed(true)}
@@ -136,6 +145,7 @@ function BenefitsQuestion({ schemeId, farmerId }: { schemeId: string; farmerId: 
 
 /** Phase 5: "applied but got no response" — data logging only, no follow-up promises */
 function NoResponseReport({ schemeId, farmerId }: { schemeId: string; farmerId: string }) {
+  const { t } = useLanguage();
   const [reported, setReported] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
@@ -153,7 +163,7 @@ function NoResponseReport({ schemeId, farmerId }: { schemeId: string; farmerId: 
     return (
       <p className="mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-400 flex items-center gap-1.5">
         <Flag className="w-3 h-3 text-slate-300" />
-        Report logged. We don't track applications — this only feeds the anonymous gap statistics.
+        {t("reportLogged")}
       </p>
     );
   }
@@ -164,14 +174,14 @@ function NoResponseReport({ schemeId, farmerId }: { schemeId: string; farmerId: 
           onClick={() => setConfirming(true)}
           className="text-[11px] font-semibold text-slate-400 hover:text-rose-500 flex items-center gap-1 transition-colors cursor-pointer"
         >
-          <Flag className="w-3 h-3" /> Applied but got no response? Report it
+          <Flag className="w-3 h-3" /> {t("appliedNoResponse")}
         </button>
       </div>
     );
   }
   return (
     <div className="mt-3 pt-3 border-t border-slate-100 flex items-center gap-2 flex-wrap">
-      <span className="text-[11px] text-slate-500">Log this report? It only adds to anonymous counts.</span>
+      <span className="text-[11px] text-slate-500">{t("logThisReport")}</span>
       <button
         onClick={async () => {
           await saveFeedback(farmerId, schemeId, { applied_no_response: true });
@@ -180,13 +190,13 @@ function NoResponseReport({ schemeId, farmerId }: { schemeId: string; farmerId: 
         }}
         className="px-2.5 py-1 rounded-lg bg-rose-500 text-white text-[11px] font-bold hover:bg-rose-600 cursor-pointer"
       >
-        Yes, log it
+        {t("yesLogIt")}
       </button>
       <button
         onClick={() => setConfirming(false)}
         className="text-[11px] font-semibold text-slate-400 hover:text-slate-600 cursor-pointer"
       >
-        cancel
+        {t("cancel")}
       </button>
     </div>
   );
@@ -199,20 +209,21 @@ function SchemeCard({
   profile: FarmerProfile;
   farmerId: string;
 }) {
+  const { t } = useLanguage();
   const { scheme } = m;
   return (
     <Card className="p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-sm font-extrabold text-slate-900">{scheme.scheme_name}</h3>
+            <h3 className="text-sm font-extrabold text-slate-900">{t(`scheme${scheme.key}Name`)}</h3>
             {scheme.category === "state" ? (
               <span className="px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 text-[10px] font-bold border border-violet-100">
-                UP State Scheme
+                {t("stateScheme")}
               </span>
             ) : (
               <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-100">
-                Central Scheme
+                {t("centralScheme")}
               </span>
             )}
           </div>
@@ -226,30 +237,28 @@ function SchemeCard({
           }`}
         >
           {m.eligible ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
-          {m.eligible ? "You qualify" : "Check status"}
+          {m.eligible ? t("youQualify") : t("checkStatus")}
         </span>
       </div>
 
-      <p className="text-xs text-slate-600 leading-relaxed mt-2">{scheme.description}</p>
-      <p className="text-[11px] font-bold text-emerald-700 mt-1.5">🎁 {scheme.benefit_summary}</p>
+      <p className="text-xs text-slate-600 leading-relaxed mt-2">{t(`scheme${scheme.key}Full`)}</p>
+      <p className="text-[11px] font-bold text-emerald-700 mt-1.5">🎁 {t(`benefit${scheme.key}`)}</p>
 
       {/* Plain-language reasons / blockers */}
       <div className="mt-3 space-y-1.5">
-        {m.eligible ? (
-          m.reasons.map((r, i) => (
-            <p key={i} className="text-[11px] text-slate-600 flex items-start gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-px" />
-              <span>{r}</span>
-            </p>
-          ))
-        ) : (
-          m.blockers.map((b, i) => (
-            <p key={i} className="text-[11px] text-slate-600 flex items-start gap-1.5">
-              <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-px" />
-              <span>{b}</span>
-            </p>
-          ))
-        )}
+        {m.eligible
+          ? m.reasonI18n.map((r, i) => (
+              <p key={i} className="text-[11px] text-slate-600 flex items-start gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-px" />
+                <span>{interp(t(r.code), r.params)}</span>
+              </p>
+            ))
+          : m.blockerI18n.map((b, i) => (
+              <p key={i} className="text-[11px] text-slate-600 flex items-start gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-px" />
+                <span>{interp(t(b.code), b.params)}</span>
+              </p>
+            ))}
       </div>
 
       {m.eligible && (
@@ -267,9 +276,9 @@ function SchemeCard({
           rel="noreferrer"
           className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition-colors"
         >
-          Apply on official portal <ExternalLink className="w-3.5 h-3.5" />
+          {t("applyOnPortal")} <ExternalLink className="w-3.5 h-3.5" />
         </a>
-        <span className="text-[9px] text-slate-400">Apply free — never pay an agent</span>
+        <span className="text-[9px] text-slate-400">{t("applyFreeNote")}</span>
       </div>
     </Card>
   );
@@ -277,6 +286,7 @@ function SchemeCard({
 
 export default function SchemesPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [schemes, setSchemes] = useState<Scheme[]>(SCHEMES);
   const [showExcluded, setShowExcluded] = useState(false);
@@ -329,9 +339,9 @@ export default function SchemesPage() {
           <div className="w-14 h-14 rounded-2xl bg-indigo-100 flex items-center justify-center mx-auto">
             <Landmark className="w-7 h-7 text-indigo-600" />
           </div>
-          <h1 className="text-2xl font-extrabold text-slate-900">Government Schemes — matched to your farm</h1>
+          <h1 className="text-2xl font-extrabold text-slate-900">{t("schemePageTitle")}</h1>
           <p className="text-sm text-slate-500 max-w-lg mx-auto">
-            We check every major scheme against your profile with its real, official eligibility rules. No agents, no middlemen — apply free on government portals.
+            {t("schemePageSub")}
           </p>
         </div>
 
@@ -339,19 +349,19 @@ export default function SchemesPage() {
         {user && (
           <Card className="p-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-[11px]">
             <span className="font-bold text-slate-700 flex items-center gap-1.5">
-              <Sprout className="w-3.5 h-3.5 text-emerald-600" /> Checking against:
+              <Sprout className="w-3.5 h-3.5 text-emerald-600" /> {t("checkingAgainst")}
             </span>
             <span className="text-slate-600">
-              State: <b>{user.state || "—"}</b>
+              {t("stateLabel")} <b>{user.state || "—"}</b>
             </span>
             <span className="text-slate-600">
-              Land: <b>{(user as any).land_acres != null ? `${(user as any).land_acres} acres` : "not set"}</b>
+              {t("landLabel")} <b>{(user as any).land_acres != null ? `${(user as any).land_acres} ${t("acresUnit")}` : t("landNotSet")}</b>
             </span>
             <span className="text-slate-600">
-              Crop: <b>{(user as any).crop_type || "not set"}</b>
+              {t("cropLabel")} <b>{(user as any).crop_type || t("cropNotSet")}</b>
             </span>
             <Link to="/profile" className="text-emerald-600 font-bold hover:underline ml-auto">
-              Update profile →
+              {t("updateProfileLink")}
             </Link>
           </Card>
         )}
@@ -361,9 +371,8 @@ export default function SchemesPage() {
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 flex items-start gap-2.5">
             <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <p className="text-xs text-amber-800 leading-relaxed">
-              Your profile is missing land / crop details, so this list uses a sample UP farmer as an example.
-              {" "}
-              <Link to="/profile" className="font-bold underline">Complete your profile</Link> for a personalized match.
+              {t("demoProfileNotice")}{" "}
+              <Link to="/profile" className="font-bold underline">{t("completeProfileLink")}</Link> {t("demoNoticeSuffix")}
             </p>
           </div>
         )}
@@ -371,9 +380,8 @@ export default function SchemesPage() {
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 flex items-start gap-2.5">
             <Info className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
             <p className="text-xs text-emerald-800 leading-relaxed">
-              You're browsing as a guest — showing matches for a sample UP farmer (2 acres, wheat).
-              {" "}
-              <button onClick={() => navigate("/login")} className="font-bold underline cursor-pointer">Log in</button> to see your own matches.
+              {t("guestNotice")}{" "}
+              <button onClick={() => navigate("/login")} className="font-bold underline cursor-pointer">{t("logInLink")}</button> {t("guestNoticeSuffix")}
             </p>
           </div>
         )}
@@ -382,7 +390,7 @@ export default function SchemesPage() {
         <div className="space-y-4">
           <h2 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            Matched for you ({result.matched.length})
+            {t("matchedForYou")} ({result.matched.length})
           </h2>
           {result.matched.map((m) => (
             <SchemeCard key={m.scheme.id} m={m} profile={evalProfile} farmerId={user?.id || ""} />
@@ -390,7 +398,7 @@ export default function SchemesPage() {
           {result.matched.length === 0 && (
             <Card className="p-6 text-center">
               <p className="text-sm text-slate-500">
-                No schemes matched yet — complete your profile (land size, crop, state) to unlock matches.
+                {t("noMatchesYet")}
               </p>
             </Card>
           )}
@@ -404,7 +412,7 @@ export default function SchemesPage() {
           >
             <span className="text-xs font-bold text-slate-500 flex items-center gap-2">
               <XCircle className="w-4 h-4 text-slate-400" />
-              {result.excluded.length} scheme{result.excluded.length !== 1 ? "s" : ""} you don't currently qualify for — see why
+              {t("notQualifySeeWhy")} ({result.excluded.length})
             </span>
             {showExcluded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
           </button>
@@ -418,7 +426,7 @@ export default function SchemesPage() {
           to="/schemes/gap-insights"
           className="block text-center text-xs font-bold text-indigo-600 hover:underline pt-2"
         >
-          See how many eligible farmers actually receive benefits →
+          {t("seeGapInsights")}
         </Link>
       </div>
     </div>

@@ -5,6 +5,7 @@ import {
   RefreshCw, Flag, ExternalLink, Sigma,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import { useLanguage } from "../contexts/LanguageContext";
 import {
   SCHEMES, computeGapStats, matchSchemes, loadSchemes,
   type Scheme, type SchemeGapStat,
@@ -41,12 +42,13 @@ function GapRow({
   stat: SchemeGapStat | undefined;
   reports: number;
 }) {
+  const { t } = useLanguage();
   const noData = !stat || stat.answered === 0;
   return (
     <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="text-sm font-extrabold text-slate-900 leading-tight">{scheme.scheme_name}</h3>
+          <h3 className="text-sm font-extrabold text-slate-900 leading-tight">{t(`scheme${scheme.key}Name`)}</h3>
           <p className="text-[11px] text-slate-400 mt-0.5">{scheme.hindi_name}</p>
         </div>
         <a
@@ -54,7 +56,7 @@ function GapRow({
           target="_blank"
           rel="noreferrer"
           className="shrink-0 text-slate-300 hover:text-indigo-500 transition-colors"
-          title="Official portal"
+          title={t("officialPortal")}
         >
           <ExternalLink className="w-4 h-4" />
         </a>
@@ -63,23 +65,23 @@ function GapRow({
       {/* The headline — honest denominator */}
       {noData ? (
         <div className="mt-4 rounded-xl bg-slate-50 border border-slate-200 p-4 text-center">
-          <p className="text-xs font-bold text-slate-500">No data yet</p>
+          <p className="text-xs font-bold text-slate-500">{t("noDataYet")}</p>
           <p className="text-[10px] text-slate-400 mt-1">
             {stat && stat.eligibleFarmers > 0
-              ? `${stat.eligibleFarmers} eligible farmer${stat.eligibleFarmers !== 1 ? "s" : ""} on the platform — none has answered the benefits question yet.`
-              : "No eligible farmers matched yet — percentages appear once eligible farmers respond."}
+              ? t("eligibleWaiting").replace("{n}", String(stat.eligibleFarmers))
+              : t("noEligibleYet")}
           </p>
         </div>
       ) : (
         <>
           <p className="mt-4 text-3xl font-extrabold text-slate-900 leading-none">
             {stat.gapPct}%
-            <span className="text-xs font-semibold text-slate-400 ml-2">eligible-but-not-receiving</span>
+            <span className="text-xs font-semibold text-slate-400 ml-2">{t("eligibleNotReceiving")}</span>
           </p>
           <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">
-            <b className="text-slate-700">{stat.gapPct}%</b> of farmers on this platform who are
-            <b className="text-slate-700"> eligible for {scheme.scheme_name.split(" (")[0]}</b> report
-            {stat.gapPct === 0 ? " receiving its benefits." : " not having received them."}
+            <b className="text-slate-700">{stat.gapPct}%</b> {t("gapWhoAre")}
+            <b className="text-slate-700"> {t("gapEligibleFor")} {t(`scheme${scheme.key}Name`).split(" (")[0]}</b> {t("gapReport")}
+            {stat.gapPct === 0 ? t("gapReceiving") : t("gapNotReceiving")}
           </p>
           <div className="mt-3">
             <GapBar pct={stat.gapPct ?? 0} />
@@ -87,19 +89,19 @@ function GapRow({
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 mt-3 text-[11px]">
             <span className="flex items-center gap-1.5 text-slate-600">
               <Sigma className="w-3.5 h-3.5 text-indigo-400" />
-              <b>{stat.eligibleFarmers}</b>&nbsp;matched-eligible (denominator)
+              <b>{stat.eligibleFarmers}</b>&nbsp;{t("matchedEligible")}
             </span>
             <span className="flex items-center gap-1.5 text-slate-600">
               <Users className="w-3.5 h-3.5 text-slate-400" />
-              <b>{stat.answered}</b>&nbsp;answered
+              <b>{stat.answered}</b>&nbsp;{t("answered")}
             </span>
             <span className="flex items-center gap-1.5 text-emerald-700">
               <CheckCircle2 className="w-3.5 h-3.5" />
-              <b>{stat.received}</b>&nbsp;received
+              <b>{stat.received}</b>&nbsp;{t("received")}
             </span>
             <span className="flex items-center gap-1.5 text-amber-700">
               <XCircle className="w-3.5 h-3.5" />
-              <b>{stat.notReceived}</b>&nbsp;not received
+              <b>{stat.notReceived}</b>&nbsp;{t("notReceived")}
             </span>
           </div>
         </>
@@ -110,15 +112,14 @@ function GapRow({
         <div className="mt-3 pt-3 border-t border-slate-100 flex items-center gap-2 text-[11px] text-slate-500">
           <Flag className="w-3.5 h-3.5 text-rose-400 shrink-0" />
           <span>
-            <b className="text-slate-700">{reports}</b> eligible farmer{reports !== 1 ? "s" : ""} reported applying and getting no response (logged, unverified).
+            {t("reportsLine").replace("{n}", String(reports))}
           </span>
         </div>
       )}
 
       {/* Method note — the honesty box */}
       <p className="mt-3 pt-3 border-t border-slate-100 text-[10px] text-slate-400 leading-relaxed">
-        Calculated only over farmers <b>matched-eligible by the same rules engine</b> used on the Schemes page —
-        not over all platform farmers. Self-reported, anonymous, small-sample data: treat as directional, not statistical.
+        {t("methodNote")}
       </p>
     </div>
   );
@@ -126,6 +127,7 @@ function GapRow({
 
 export default function SchemeGapInsightsPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [stats, setStats] = useState<Record<string, SchemeGapStat>>({});
   const [schemes, setSchemes] = useState<Scheme[]>(SCHEMES);
   const [loading, setLoading] = useState(true);
@@ -176,19 +178,18 @@ export default function SchemeGapInsightsPage() {
           <div className="w-14 h-14 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto">
             <BarChart3 className="w-7 h-7 text-amber-600" />
           </div>
-          <h1 className="text-2xl font-extrabold text-slate-900">Scheme Gap Insights</h1>
+          <h1 className="text-2xl font-extrabold text-slate-900">{t("gapPageTitle")}</h1>
           <p className="text-sm text-slate-500 max-w-xl mx-auto leading-relaxed">
-            The delivery gap: how many farmers who <b>qualify</b> for each scheme report actually <b>receiving</b> it.
-            Built from platform farmers' own answers — nothing here comes from a live government feed.
+            {t("gapPageSub")}
           </p>
         </div>
 
         {/* Personal context */}
         {user && myMatches.length > 0 && (
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-xs text-emerald-900 leading-relaxed">
-            <b>You qualify for {myMatches.length} scheme{myMatches.length !== 1 ? "s" : ""}.</b>{" "}
-            Your answers feed these numbers anonymously —
-            <Link to="/schemes" className="font-bold underline"> answer the benefits question on the Schemes page</Link>.
+            <b>{t("youQualifyFor").replace("{n}", String(myMatches.length))}</b>{" "}
+            {t("yourAnswersFeed")}
+            <Link to="/schemes" className="font-bold underline"> {t("answerOnSchemesPage")}</Link>.
           </div>
         )}
 
@@ -196,17 +197,15 @@ export default function SchemeGapInsightsPage() {
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 flex items-start gap-2.5">
           <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
           <p className="text-xs text-amber-900 leading-relaxed">
-            <b>How to read this:</b> percentages use only the matched-eligible farmers as the denominator (the correct
-            base — comparing against all farmers would understate the gap). Data is self-reported and small-sample;
-            it is a directional pitch metric, not an official statistic.{" "}
-            {user ? "" : "Log in and answer the per-scheme question to contribute your data point."}
+            <b>{t("howToReadLabel")}</b> {t("howToRead")}{" "}
+            {user ? "" : t("logInToContribute")}
           </p>
         </div>
 
         {loading ? (
           <div className="flex items-center justify-center gap-3 py-16">
             <RefreshCw className="w-6 h-6 animate-spin text-emerald-600" />
-            <span className="text-sm text-slate-500">Re-running the eligibility engine across all farmer profiles…</span>
+            <span className="text-sm text-slate-500">{t("reRunningEngine")}</span>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -220,10 +219,10 @@ export default function SchemeGapInsightsPage() {
         <div className="text-center space-y-2 pt-2">
           <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400">
             <Landmark className="w-3.5 h-3.5" />
-            <span>Beneficiary context (static snapshot, not live): PM-KISAN ~11 crore India / ~2.9 crore UP (2024, pmkisan.gov.in & data.gov.in); PMFBY ~4 crore cumulative enrolments (FY 2023-24).</span>
+            <span>{t("beneficiaryContext")}</span>
           </div>
           <Link to="/schemes" className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 hover:underline">
-            <AlertTriangle className="w-3.5 h-3.5" /> Back to your scheme matches
+            <AlertTriangle className="w-3.5 h-3.5" /> {t("backToMatches")}
           </Link>
         </div>
       </div>

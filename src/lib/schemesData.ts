@@ -54,6 +54,8 @@ export interface Scheme {
   id: string;
   scheme_name: string;
   hindi_name: string;
+  /** Short stable key used to build translation keys (scheme{Key}Name etc.) */
+  key: string;
   description: string;
   benefit_summary: string;
   category: "central" | "state";
@@ -67,6 +69,7 @@ export const TWO_HA_IN_ACRES = 4.94; // 2 hectares, rounded to 2 decimals
 export const SCHEMES: Scheme[] = [
   {
     id: "pm-kisan",
+    key: "Pmkisan",
     scheme_name: "PM-KISAN (Pradhan Mantri Kisan Samman Nidhi)",
     hindi_name: "किसान सम्मान निधि",
     description:
@@ -88,6 +91,7 @@ export const SCHEMES: Scheme[] = [
   },
   {
     id: "pmfby",
+    key: "Pmfby",
     scheme_name: "PMFBY (Pradhan Mantri Fasal Bima Yojana)",
     hindi_name: "फसल बीमा योजना",
     description:
@@ -113,6 +117,7 @@ export const SCHEMES: Scheme[] = [
   },
   {
     id: "kcc",
+    key: "Kcc",
     scheme_name: "Kisan Credit Card (KCC)",
     hindi_name: "किसान क्रेडिट कार्ड",
     description:
@@ -134,6 +139,7 @@ export const SCHEMES: Scheme[] = [
   },
   {
     id: "pm-kisan-maandhan",
+    key: "Maandhan",
     scheme_name: "PM-KISAN Maandhan (Kisan Pension Yojana)",
     hindi_name: "किसान पेंशन योजना",
     description:
@@ -157,6 +163,7 @@ export const SCHEMES: Scheme[] = [
   },
   {
     id: "soil-health-card",
+    key: "Shc",
     scheme_name: "Soil Health Card Scheme",
     hindi_name: "मृदा स्वास्थ्य कार्ड",
     description:
@@ -171,6 +178,7 @@ export const SCHEMES: Scheme[] = [
   },
   {
     id: "up-kisan-kalyan",
+    key: "Upkk",
     scheme_name: "Mukhyamantri Kisan Kalyan Yojana (Uttar Pradesh)",
     hindi_name: "मुख्यमंत्री किसान कल्याण योजना",
     description:
@@ -191,11 +199,19 @@ export const SCHEMES: Scheme[] = [
 ];
 
 // ---------- Eligibility rules engine (pure, deterministic) ----------
+export interface I18nText {
+  code: string;
+  params?: Record<string, string | number>;
+  en: string; // English fallback (also used by tests)
+}
+
 export interface SchemeMatch {
   scheme: Scheme;
   eligible: boolean;
-  reasons: string[]; // plain-language WHY eligible
-  blockers: string[]; // plain-language why NOT (drives exclusion copy)
+  reasons: string[]; // English fallback text
+  blockers: string[];
+  reasonI18n: I18nText[]; // rendered via t(code) + params in the UI
+  blockerI18n: I18nText[];
   missingProfileFields: string[]; // profile fields to add, e.g. ["land_acres"]
 }
 
@@ -236,57 +252,65 @@ function fmtAcres(n: number): string {
 
 export function matchSchemes(p: FarmerProfile, schemes: Scheme[] = SCHEMES): MatchResult {
   // Pass 1: verdict per scheme (without dependency checks)
-  const verdicts = new Map<string, { reasons: string[]; blockers: string[]; missing: string[] }>();
+  const verdicts = new Map<string, { reasons: I18nText[]; blockers: I18nText[]; missing: string[] }>();
   for (const scheme of schemes) {
     const r = scheme.eligibility_rules || {};
-    const reasons: string[] = [];
-    const blockers: string[] = [];
+    const reasons: I18nText[] = [];
+    const blockers: I18nText[] = [];
     const missing: string[] = [];
     const pushMissing = (field: string) => {
       if (!missing.includes(field)) missing.push(field);
+    };
+    const addReason = (code: string, en: string, params?: Record<string, string | number>) => {
+      reasons.push({ code, params, en });
+    };
+    const addBlocker = (code: string, en: string, params?: Record<string, string | number>) => {
+      blockers.push({ code, params, en });
     };
 
     // ---- Profile completeness (soft-fail: "excluded" with an actionable hint) ----
     if (r.landholderRequired && (p.land_acres == null || p.land_acres <= 0)) {
       pushMissing("land_acres");
-      blockers.push("Add your land holding in your profile to confirm land-based eligibility");
+      addBlocker("blockerAddLand", "Add your land holding in your profile to confirm land-based eligibility");
     }
     if (r.minAge != null && (p.age == null || p.age <= 0)) {
       pushMissing("age");
-      blockers.push(`Add your age in your profile — minimum age is ${r.minAge}`);
+      addBlocker("blockerAddAge", `Add your age in your profile — minimum age is ${r.minAge}`, { min: r.minAge });
     }
     if (r.cropTypes && (!p.crop_type || p.crop_type.trim() === "")) {
       pushMissing("crop_type");
-      blockers.push("Add your main crop in your profile to check the notified crop list");
+      addBlocker("blockerAddCrop", "Add your main crop in your profile to check the notified crop list");
     }
     if (r.states && !p.state) {
       pushMissing("state");
-      blockers.push("Add your state in your profile to check state-scheme eligibility");
+      addBlocker("blockerAddState", "Add your state in your profile to check state-scheme eligibility");
     }
 
     // ---- Hard rules ----
     if (r.excludeIncomeTaxPayers && p.is_income_tax_payer === true) {
-      blockers.push("Income-tax payers are excluded from PM-KISAN");
+      addBlocker("blockerTaxPayer", "Income-tax payers are excluded from PM-KISAN");
     }
     if (r.landMaxAcres != null && p.land_acres != null && p.land_acres > r.landMaxAcres + 1e-9) {
-      blockers.push(
-        `Land holding (${fmtAcres(p.land_acres)} acres ≈ ${(p.land_acres / ACRES_PER_HECTARE).toFixed(2)} ha) exceeds the ${r.landMaxAcres}-acre (2 ha) small & marginal farmer limit`
+      addBlocker(
+        "blockerLandMax",
+        `Land holding (${fmtAcres(p.land_acres)} acres ≈ ${(p.land_acres / ACRES_PER_HECTARE).toFixed(2)} ha) exceeds the ${r.landMaxAcres}-acre (2 ha) small & marginal farmer limit`,
+        { acres: fmtAcres(p.land_acres), ha: (p.land_acres! / ACRES_PER_HECTARE).toFixed(2), max: r.landMaxAcres }
       );
     }
     if (r.minAge != null && p.age != null && p.age > 0 && p.age < r.minAge) {
-      blockers.push(`Minimum age is ${r.minAge} years (you reported ${p.age})`);
+      addBlocker("blockerAgeMin", `Minimum age is ${r.minAge} years (you reported ${p.age})`, { min: r.minAge, age: p.age! });
     }
     if (r.maxAge != null && p.age != null && p.age > r.maxAge) {
-      blockers.push(`Maximum age is ${r.maxAge} years (you reported ${p.age})`);
+      addBlocker("blockerAgeMax", `Maximum age is ${r.maxAge} years (you reported ${p.age})`, { max: r.maxAge, age: p.age! });
     }
     if (r.cropTypes && p.crop_type && !r.cropTypes.map(normalizeCrop).includes(normalizeCrop(p.crop_type))) {
-      blockers.push(`Your crop (${p.crop_type}) is not on PMFBY's notified crop list for this season`);
+      addBlocker("blockerCropNotListed", `Your crop (${p.crop_type}) is not on the notified insurance crop list for this season`, { crop: p.crop_type! });
     }
     if (r.states && p.state && !r.states.map(normalizeState).includes(normalizeState(p.state))) {
-      blockers.push(`Only farmers in ${r.states[0]} are eligible — this is a state scheme`);
+      addBlocker("blockerStateOnly", `Only farmers in ${r.states[0]} are eligible — this is a state scheme`, { state: r.states![0] });
     }
 
-    buildReasons(p, r, reasons);
+    buildReasons(p, r, addReason);
     verdicts.set(scheme.id, { reasons, blockers, missing });
   }
 
@@ -299,14 +323,16 @@ export function matchSchemes(p: FarmerProfile, schemes: Scheme[] = SCHEMES): Mat
     // Dependency rule: block only when the required scheme is itself blocked
     // (if the farmer qualifies for PM-KISAN, they can enrol and get the top-up)
     if (dep && (verdicts.get(dep)?.blockers.length ?? 1) > 0) {
-      v.blockers.push("Requires you to be enrolled in PM-KISAN first");
+      v.blockers.push({ code: "blockerNeedPmkisan", en: "Requires you to be enrolled in PM-KISAN first" });
     }
     const eligible = v.blockers.length === 0;
     const match: SchemeMatch = {
       scheme,
       eligible,
-      reasons: eligible ? v.reasons : [],
-      blockers: v.blockers,
+      reasons: eligible ? v.reasons.map((x) => x.en) : [],
+      blockers: v.blockers.map((x) => x.en),
+      reasonI18n: eligible ? v.reasons : [],
+      blockerI18n: v.blockers,
       missingProfileFields: v.missing,
     };
     (eligible ? matched : excluded).push(match);
@@ -314,9 +340,13 @@ export function matchSchemes(p: FarmerProfile, schemes: Scheme[] = SCHEMES): Mat
   return { matched, excluded };
 }
 
-function buildReasons(p: FarmerProfile, r: SchemeRules, out: string[]): void {
+function buildReasons(
+  p: FarmerProfile,
+  r: SchemeRules,
+  add: (code: string, en: string, params?: Record<string, string | number>) => void
+): void {
   if (r.landholderRequired && p.land_acres != null && p.land_acres > 0) {
-    out.push(`You qualify because you hold ${fmtAcres(p.land_acres)} acres of agricultural land`);
+    add("reasonLandHold", `You qualify because you hold ${fmtAcres(p.land_acres)} acres of agricultural land`, { acres: fmtAcres(p.land_acres) });
   }
   if (
     r.landMaxAcres != null &&
@@ -324,31 +354,32 @@ function buildReasons(p: FarmerProfile, r: SchemeRules, out: string[]): void {
     p.land_acres > 0 &&
     p.land_acres <= r.landMaxAcres
   ) {
-    out.push(
-      `You qualify because your land holding (${fmtAcres(p.land_acres)} acres) is within the ${r.landMaxAcres}-acre (2 ha) small & marginal farmer limit`
+    add(
+      "reasonLandWithinLimit",
+      `You qualify because your land holding (${fmtAcres(p.land_acres)} acres) is within the ${r.landMaxAcres}-acre (2 ha) small & marginal farmer limit`,
+      { acres: fmtAcres(p.land_acres), max: r.landMaxAcres }
     );
   }
   if (r.excludeIncomeTaxPayers && p.is_income_tax_payer !== true) {
-    out.push("You qualify because you are not an income-tax payer");
+    add("reasonNotTaxPayer", "You qualify because you are not an income-tax payer");
   }
   if (r.minAge != null && p.age != null && p.age >= r.minAge && (r.maxAge == null || p.age <= r.maxAge)) {
-    out.push(
+    add(
+      r.maxAge != null ? "reasonAgeWindow" : "reasonAgeMinOk",
       r.maxAge != null
         ? `You qualify because your age (${p.age}) is within the ${r.minAge}-${r.maxAge} enrolment window`
-        : `You meet the minimum age requirement (${r.minAge}+)`
+        : `You meet the minimum age requirement (${r.minAge}+)`,
+      { age: p.age!, min: r.minAge, max: r.maxAge ?? 0 }
     );
   }
   if (r.cropTypes && p.crop_type && r.cropTypes.map(normalizeCrop).includes(normalizeCrop(p.crop_type))) {
-    out.push(`Your crop (${p.crop_type}) is on the notified insurance crop list`);
+    add("reasonCropListed", `Your crop (${p.crop_type}) is on the notified insurance crop list`, { crop: p.crop_type });
   }
   if (r.states && p.state && r.states.map(normalizeState).includes(normalizeState(p.state))) {
-    out.push(`You qualify because you farm in ${r.states[0]}`);
+    add("reasonStateOk", `You qualify because you farm in ${r.states[0]}`, { state: r.states[0] });
   }
   if (r.requiresSchemeId === "pm-kisan" && p.land_acres != null && p.land_acres > 0) {
-    out.push("You qualify because you hold agricultural land and can enrol in PM-KISAN");
-  }
-  if (out.length === 0) {
-    out.push("You meet the basic eligibility criteria for this scheme");
+    add("reasonPmkisanBase", "You qualify because you hold agricultural land and can enrol in PM-KISAN");
   }
 }
 
@@ -359,6 +390,8 @@ export interface DocStatus {
   /** Non-null when this doc maps to a specific profile page that's missing data */
   fixPath: string | null;
   fixLabel: string | null;
+  /** Translation key for fixLabel (UI renders t(fixCode) when present) */
+  fixCode: string | null;
 }
 
 export function assessDocuments(p: FarmerProfile, scheme: Scheme): DocStatus[] {
@@ -371,6 +404,7 @@ export function assessDocuments(p: FarmerProfile, scheme: Scheme): DocStatus[] {
         have: !!p.aadhaar_linked,
         fixPath: "/profile",
         fixLabel: "Link your Aadhaar in your Profile",
+        fixCode: "docAadhaarFix",
       };
     }
     // Bank
@@ -380,6 +414,7 @@ export function assessDocuments(p: FarmerProfile, scheme: Scheme): DocStatus[] {
         have: !!p.bank_account_linked,
         fixPath: "/profile",
         fixLabel: "Add your bank account in your Profile",
+        fixCode: "docBankFix",
       };
     }
     // Land records / tenancy
@@ -389,6 +424,7 @@ export function assessDocuments(p: FarmerProfile, scheme: Scheme): DocStatus[] {
         have: !!p.land_records_uploaded,
         fixPath: "/profile",
         fixLabel: "Mark your land records as uploaded in your Profile",
+        fixCode: "docLandFix",
       };
     }
     // Sowing certificate — no profile field; point at the Lekhpal/Patwari
@@ -398,6 +434,7 @@ export function assessDocuments(p: FarmerProfile, scheme: Scheme): DocStatus[] {
         have: false,
         fixPath: null,
         fixLabel: "Get a sowing certificate (girdawari) from your Lekhpal/Patwari",
+        fixCode: "docSowingFix",
       };
     }
     // PM-KISAN beneficiary ID — must apply on the official portal first
@@ -407,6 +444,7 @@ export function assessDocuments(p: FarmerProfile, scheme: Scheme): DocStatus[] {
         have: false,
         fixPath: null,
         fixLabel: "Apply on pmkisan.gov.in first to get your beneficiary ID",
+        fixCode: "docPmkisanIdFix",
       };
     }
     // Crop plan — satisfied by having a crop in the profile
@@ -416,13 +454,14 @@ export function assessDocuments(p: FarmerProfile, scheme: Scheme): DocStatus[] {
         have: !!p.crop_type,
         fixPath: "/profile",
         fixLabel: "Add your main crop in your Profile",
+        fixCode: "docCropPlanFix",
       };
     }
     // "No documents needed" → satisfied
     if (d.includes("no documents")) {
-      return { doc, have: true, fixPath: null, fixLabel: null };
+      return { doc, have: true, fixPath: null, fixLabel: null, fixCode: null };
     }
-    return { doc, have: false, fixPath: null, fixLabel: "Prepare this document before applying" };
+    return { doc, have: false, fixPath: null, fixLabel: "Prepare this document before applying", fixCode: "docPrepareFix" };
   });
 }
 
