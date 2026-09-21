@@ -67,6 +67,8 @@ const MarketplacePage = lazy(() => import("./pages/MarketplacePage"));
 const SupplyChainPage = lazy(() => import("./pages/SupplyChainPage"));
 const ProcessProducePage = lazy(() => import("./pages/ProcessProducePage"));
 const SubscriptionPage = lazy(() => import("./pages/SubscriptionPage"));
+const SchemesPage = lazy(() => import("./pages/SchemesPage"));
+const SchemeGapInsightsPage = lazy(() => import("./pages/SchemeGapInsightsPage"));
 
 /**
  * Full-screen themed loading state shown while a lazy page chunk downloads.
@@ -167,6 +169,10 @@ function AppShell() {
                       <Route path="/login" element={<LoginPage />} />
                       <Route path="/register" element={<RegisterPage />} />
                       <Route path="/subscription" element={<SubscriptionPage />} />
+
+                      {/* Government Schemes — eligibility matcher + gap insights */}
+                      <Route path="/schemes" element={<SchemesPage />} />
+                      <Route path="/schemes/gap-insights" element={<SchemeGapInsightsPage />} />
 
                       {/* Merchant World (role-guarded) */}
                       <Route

@@ -11,6 +11,7 @@ import {
   fetchTwinState, loadTwinField, saveTwinField, wiltThreshold, getStateClimate,
   type TwinState, type TwinAdvisory, type TwinProjectionPoint,
 } from "../lib/digitalTwinData";
+import PmfbyEvidenceExport from "../components/digitaltwin/PmfbyEvidenceExport";
 
 const ADVISORY_STYLE: Record<TwinAdvisory["severity"], { border: string; bg: string; icon: React.ReactNode }> = {
   good: { border: "border-emerald-200", bg: "bg-emerald-50", icon: <ShieldCheck className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" /> },
@@ -516,6 +517,9 @@ export default function DigitalTwinPage() {
             <span className="flex items-center gap-1.5">🌧 = forecast rain (mm)</span>
           </div>
         </div>
+
+        {/* ===== Phase 3: Digital Twin → PMFBY evidence bridge ===== */}
+        <PmfbyEvidenceExport twin={t} />
 
         {/* Footer note */}
         <p className="text-[11px] text-slate-400 text-center max-w-2xl mx-auto leading-relaxed">

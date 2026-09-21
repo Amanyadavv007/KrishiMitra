@@ -5,7 +5,7 @@ import {
   User, LogOut, Settings as SettingsIcon, Bell, Store, IndianRupee,
   Tractor, BrainCircuit, FlaskConical, Satellite, Map as MapIcon,
   SlidersHorizontal, ShoppingCart, GraduationCap, MessageCircle, Boxes,
-  Package, Handshake, Crown,
+  Package, Handshake, Crown, Landmark,
 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useLanguage } from "../../contexts/LanguageContext";
@@ -69,6 +69,7 @@ export default function MobileNav() {
   ];
 
   const quickLinks: MenuItem[] = [
+    { to: "/schemes", label: "Govt Schemes", icon: <Landmark className="w-[18px] h-[18px] text-indigo-600" />, hoverBg: "hover:bg-indigo-50" },
     { to: "/weather", label: t("weather"), icon: <Activity className="w-[18px] h-[18px] text-sky-600" />, hoverBg: "hover:bg-sky-50" },
     { to: "/inventory", label: t("fasalStock"), icon: <Boxes className="w-[18px] h-[18px] text-emerald-600" />, hoverBg: "hover:bg-emerald-50" },
     { to: "/assistant", label: t("aiAssistant"), icon: <MessageCircle className="w-[18px] h-[18px] text-sky-600" />, hoverBg: "hover:bg-sky-50" },

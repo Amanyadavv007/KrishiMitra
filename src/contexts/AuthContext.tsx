@@ -16,6 +16,15 @@ export interface User {
   shopName?: string;
   shopCategory?: string;
   createdAt: string;
+  // ---- Government Schemes layer (Phase 1-4) ----
+  land_acres?: number | null;
+  crop_type?: string | null;
+  annual_income_inr?: number | null;
+  age?: number | null;
+  aadhaar_linked?: boolean;
+  bank_account_linked?: boolean;
+  land_records_uploaded?: boolean;
+  is_income_tax_payer?: boolean;
 }
 
 export interface RegisterInput {
@@ -85,6 +94,14 @@ function mapFarmerRow(row: any): User {
     shopName: row.shop_name || "",
     shopCategory: row.shop_category || "",
     createdAt: row.created_at || new Date().toISOString(),
+    land_acres: row.land_acres ?? null,
+    crop_type: row.crop_type ?? null,
+    annual_income_inr: row.annual_income_inr ?? null,
+    age: row.age ?? null,
+    aadhaar_linked: row.aadhaar_linked ?? false,
+    bank_account_linked: row.bank_account_linked ?? false,
+    land_records_uploaded: row.land_records_uploaded ?? false,
+    is_income_tax_payer: row.is_income_tax_payer ?? false,
   };
 }
 
@@ -310,7 +327,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } = updated;
       await supabase
         .from("farmers")
-        .update({ ...fields, updated_at: new Date().toISOString() })
+        .update({ ...(fields as Record<string, unknown>), updated_at: new Date().toISOString() })
         .eq("id", user.id);
     } else {
       const users = getLocalUsers();

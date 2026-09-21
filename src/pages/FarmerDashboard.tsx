@@ -492,9 +492,9 @@ export default function FarmerDashboard() {
               <h2 className="text-base font-extrabold text-slate-900">Sarkari Yojanaayein</h2>
             </div>
             <div className="flex items-center gap-3">
-              <a href="https://agriwelfare.gov.in" target="_blank" rel="noreferrer" className="text-xs font-bold text-emerald-600 hover:underline flex items-center gap-0.5">
-                View All Schemes <ArrowRight className="w-3.5 h-3.5" />
-              </a>
+              <Link to="/schemes" className="text-xs font-bold text-emerald-600 hover:underline flex items-center gap-0.5">
+                Check your eligibility <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
                 <BadgeCheck className="w-3.5 h-3.5 text-indigo-400" /> Official Portals
               </span>
