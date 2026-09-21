@@ -28,7 +28,7 @@ const SCHEMES = [
   {
     name: "PM-KISAN",
     hindiName: "प्रधानमंत्री किसान सम्मान निधि",
-    desc: "₹6,000/year income support to small and marginal farmers.",
+    descKey: "schemePmkisanDesc",
     url: "https://pmkisan.gov.in",
     Icon: Landmark,
     iconCls: "bg-emerald-100 text-emerald-600",
@@ -36,7 +36,7 @@ const SCHEMES = [
   {
     name: "PMFBY",
     hindiName: "प्रधानमंत्री फसल बीमा योजना",
-    desc: "Crop insurance for farmers against natural calamities and crop loss.",
+    descKey: "schemePmfbyDesc",
     url: "https://pmfby.gov.in",
     Icon: ShieldCheck,
     iconCls: "bg-blue-100 text-blue-600",
@@ -44,7 +44,7 @@ const SCHEMES = [
   {
     name: "Kisan Credit Card",
     hindiName: "किसान क्रेडिट कार्ड",
-    desc: "Provides affordable credit for agricultural and allied activities.",
+    descKey: "schemeKccDesc",
     url: "https://fasalrin.gov.in",
     Icon: CreditCard,
     iconCls: "bg-amber-100 text-amber-600",
@@ -52,18 +52,18 @@ const SCHEMES = [
   {
     name: "eNAM",
     hindiName: "राष्ट्रीय कृषि बाज़ार",
-    desc: "Online trading platform for farmers to get better prices for their produce.",
+    descKey: "schemeEnamDesc",
     url: "https://enam.gov.in",
     Icon: LeafIcon,
     iconCls: "bg-violet-100 text-violet-600",
   },
 ];
 
-function severityChip(severity?: string): { label: string; cls: string } {
+function severityChip(severity?: string): { labelKey: string; cls: string } {
   const s = (severity || "").toLowerCase();
-  if (s.includes("high") || s.includes("critical")) return { label: "High Priority", cls: "bg-rose-100 text-rose-600" };
-  if (s.includes("low")) return { label: "Low", cls: "bg-emerald-100 text-emerald-600" };
-  return { label: "Medium", cls: "bg-amber-100 text-amber-700" };
+  if (s.includes("high") || s.includes("critical")) return { labelKey: "statusHighPriority", cls: "bg-rose-100 text-rose-600" };
+  if (s.includes("low")) return { labelKey: "statusLow", cls: "bg-emerald-100 text-emerald-600" };
+  return { labelKey: "statusMedium", cls: "bg-amber-100 text-amber-700" };
 }
 
 function fmtDate(iso?: string): string {
@@ -134,16 +134,16 @@ export default function FarmerDashboard() {
       .then((data) => {
         if (cancelled || !data?.current) return;
         const code = data.current.weather_code ?? 0;
-        const condition =
-          code === 0 ? "Clear" :
-          code <= 3 ? "Partly Cloudy" :
-          code <= 48 ? "Foggy" :
-          code <= 67 ? "Rainy" :
-          code <= 82 ? "Rainy" :
-          code <= 99 ? "Thunderstorm" : "Cloudy";
+        const conditionKey =
+          code === 0 ? "condClear" :
+          code <= 3 ? "condPartlyCloudy" :
+          code <= 48 ? "condFoggy" :
+          code <= 67 ? "condRainy" :
+          code <= 82 ? "condRainy" :
+          code <= 99 ? "condThunderstorm" : "condCloudy";
         setWeather({
           temp: Math.round(data.current.temperature_2m ?? 28),
-          condition,
+          condition: conditionKey,
           humidity: data.current.relative_humidity_2m ?? 60,
           windSpeed: Math.round(data.current.wind_speed_10m ?? 10),
           rainfall: data.current.rain_probability ?? 0,
@@ -168,8 +168,8 @@ export default function FarmerDashboard() {
   const invKg = (i: InventoryRow) => (i.unit === "quintal" ? Number(i.quantity) * 100 : Number(i.quantity));
 
   const weatherIcon = weather
-    ? weather.condition === "Clear" ? <Sun className="w-9 h-9 text-amber-400" />
-      : weather.condition === "Rainy" || weather.condition === "Thunderstorm" ? <CloudRain className="w-9 h-9 text-blue-400" />
+    ? weather.condition === "condClear" ? <Sun className="w-9 h-9 text-amber-400" />
+      : weather.condition === "condRainy" || weather.condition === "condThunderstorm" ? <CloudRain className="w-9 h-9 text-blue-400" />
       : <CloudSun className="w-9 h-9 text-amber-300" />
     : <CloudSun className="w-9 h-9 text-slate-300 animate-pulse" />;
 
@@ -194,7 +194,7 @@ export default function FarmerDashboard() {
             {/* Greeting */}
             <div className="flex flex-col justify-center">
               <h1 className="text-2xl sm:text-3xl font-extrabold text-white drop-shadow-md">
-                {t("greeting")}, {user ? user.name : "Farmer"} 🙏
+                {t("greeting")}, {user ? user.name : t("farmerFallback")} 🙏
               </h1>
               <p className="mt-1.5 text-sm font-semibold text-white/95 flex items-center gap-1.5 drop-shadow">
                 <MapPin className="w-4 h-4 text-emerald-300" />
@@ -212,7 +212,7 @@ export default function FarmerDashboard() {
                 {weatherIcon}
                 <div>
                   <p className="text-3xl font-extrabold leading-none">{weather ? `${weather.temp}°C` : "—"}</p>
-                  <p className="text-xs font-semibold text-white/85 mt-1">{weather ? weather.condition : "..."}</p>
+                  <p className="text-xs font-semibold text-white/85 mt-1">{weather ? t(weather.condition) : "..."}</p>
                 </div>
               </div>
               <div className="mt-3 space-y-1.5 text-xs border-t border-white/20 pt-2.5">
@@ -234,40 +234,40 @@ export default function FarmerDashboard() {
             {/* Farm status card */}
             <div className="bg-gradient-to-br from-emerald-800/85 to-emerald-950/85 backdrop-blur-sm rounded-2xl p-4 text-white ring-1 ring-white/15 flex flex-col justify-center">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-bold">Your Farm Status</p>
+                <p className="text-sm font-bold">{t("farmStatusLabel")}</p>
                 <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${farmStatusGood ? "bg-emerald-400 text-emerald-950" : "bg-amber-300 text-amber-950"}`}>
-                  {farmStatusGood ? "Good" : "Watch"}
+                  {farmStatusGood ? t("statusGood") : t("statusWatch")}
                 </span>
               </div>
               <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5 text-xs">
                 <div className="flex items-center gap-2">
                   <Leaf className="w-4 h-4 text-emerald-300 shrink-0" />
                   <div>
-                    <p className="font-semibold text-white/95">Soil Health</p>
-                    <p className="text-emerald-300 font-bold text-[11px]">Optimal</p>
+                    <p className="font-semibold text-white/95">{t("soilHealth")}</p>
+                    <p className="text-emerald-300 font-bold text-[11px]">{t("soilOptimal")}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-emerald-300 shrink-0" />
                   <div>
-                    <p className="font-semibold text-white/95">Crop Growth</p>
-                    <p className="text-emerald-300 font-bold text-[11px]">On Track</p>
+                    <p className="font-semibold text-white/95">{t("cropGrowth")}</p>
+                    <p className="text-emerald-300 font-bold text-[11px]">{t("cropOnTrack")}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <Sun className="w-4 h-4 text-amber-300 shrink-0" />
                   <div>
-                    <p className="font-semibold text-white/95">Weather</p>
+                    <p className="font-semibold text-white/95">{t("weatherLabel")}</p>
                     <p className={`font-bold text-[11px] ${farmStatusGood ? "text-emerald-300" : "text-amber-300"}`}>
-                      {weather ? (farmStatusGood ? "Favorable" : "Check Advisory") : "—"}
+                      {weather ? (farmStatusGood ? t("weatherFavorable") : t("weatherCheckAdvisory")) : "—"}
                     </p>
                   </div>
                 </div>
                 <Link to="/weather" className="flex items-center gap-2 group">
                   <CloudSun className="w-4 h-4 text-emerald-300 shrink-0" />
                   <div>
-                    <p className="font-semibold text-white/95">Forecast</p>
-                    <p className="text-emerald-300 font-bold text-[11px] group-hover:underline">5-day view →</p>
+                    <p className="font-semibold text-white/95">{t("forecastLabel")}</p>
+                    <p className="text-emerald-300 font-bold text-[11px] group-hover:underline">{t("forecast5day")} →</p>
                   </div>
                 </Link>
               </div>
@@ -287,7 +287,7 @@ export default function FarmerDashboard() {
               </span>
               <div>
                 <p className="text-sm font-extrabold text-slate-900">{t("scanCrop")}</p>
-                <p className="text-[11px] text-slate-500">Identify diseases & get solutions</p>
+                <p className="text-[11px] text-slate-500">{t("scanCropSub")}</p>
               </div>
             </div>
             <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all" />
@@ -303,7 +303,7 @@ export default function FarmerDashboard() {
               </span>
               <div>
                 <p className="text-sm font-extrabold text-slate-900">{t("postIssue")}</p>
-                <p className="text-[11px] text-slate-500">Ask questions or report problems</p>
+                <p className="text-[11px] text-slate-500">{t("postIssueSub")}</p>
               </div>
             </div>
             <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-amber-600 group-hover:translate-x-0.5 transition-all" />
@@ -319,7 +319,7 @@ export default function FarmerDashboard() {
               </span>
               <div>
                 <p className="text-sm font-extrabold text-violet-800">{t("sellProduce")}</p>
-                <p className="text-[11px] text-violet-500">Connect with buyers & get best price</p>
+                <p className="text-[11px] text-violet-500">{t("sellProduceSub")}</p>
               </div>
             </div>
             <ArrowRight className="w-4 h-4 text-violet-400 group-hover:text-violet-700 group-hover:translate-x-0.5 transition-all" />
@@ -341,14 +341,14 @@ export default function FarmerDashboard() {
               </Link>
             </div>
             <p className="text-[11px] text-slate-500 mb-3">
-              Total items: <span className="font-bold text-slate-700">{activeInv.length}</span>
+              {t("totalItems")}: <span className="font-bold text-slate-700">{activeInv.length}</span>
               <span className="mx-1.5 text-slate-300">|</span>
-              Total Quantity: <span className="font-bold text-slate-700">{totalStockKg.toLocaleString()} kg</span>
+              {t("totalQuantity")}: <span className="font-bold text-slate-700">{totalStockKg.toLocaleString()} kg</span>
             </p>
 
             {!user ? (
               <div className="text-center py-6">
-                <p className="text-xs text-slate-500 mb-3">Login to see your crop stock here</p>
+                <p className="text-xs text-slate-500 mb-3">{t("loginToSeeStock")}</p>
                 <button
                   onClick={() => navigate("/login?returnTo=/dashboard")}
                   className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs cursor-pointer"
@@ -357,7 +357,7 @@ export default function FarmerDashboard() {
                 </button>
               </div>
             ) : activeInv.length === 0 ? (
-              <p className="text-[11px] text-slate-400 text-center py-8">No stock yet — add your first harvest in Crop Stock</p>
+              <p className="text-[11px] text-slate-400 text-center py-8">{t("noStockYet")}</p>
             ) : (
               <div className="grid grid-cols-2 gap-3">
                 {activeInv.slice(0, 4).map((i) => {
@@ -378,7 +378,7 @@ export default function FarmerDashboard() {
                       <p className="text-[10px] text-slate-500">{kg.toLocaleString()} kg</p>
                       <span className={`mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold ${healthy ? "bg-emerald-50 text-emerald-600" : "bg-blue-50 text-blue-600"}`}>
                         <Leaf className="w-2.5 h-2.5" />
-                        {i.status === "listed" ? t("listed") : healthy ? "Healthy" : "Good"}
+                        {i.status === "listed" ? t("listed") : healthy ? t("statusHealthy") : t("statusGoodStock")}
                       </span>
                     </div>
                   );
@@ -400,13 +400,13 @@ export default function FarmerDashboard() {
                     {t("viewAll")} <ChevronRight className="w-3 h-3" />
                   </Link>
                 )}
-                <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-extrabold">🔥 {pendingCount} New</span>
+                <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-extrabold">🔥 {pendingCount} {t("orderNew")}</span>
               </div>
             </div>
 
             {!user ? (
               <div className="text-center py-6">
-                <p className="text-xs text-slate-500 mb-3">Login to see your order history</p>
+                <p className="text-xs text-slate-500 mb-3">{t("loginToSeeOrders")}</p>
                 <button
                   onClick={() => navigate("/login?returnTo=/dashboard")}
                   className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs cursor-pointer"
@@ -415,11 +415,11 @@ export default function FarmerDashboard() {
                 </button>
               </div>
             ) : orders.length === 0 ? (
-              <p className="text-[11px] text-slate-400 text-center py-8">No orders yet — sell from the Marketplace</p>
+              <p className="text-[11px] text-slate-400 text-center py-8">{t("noOrdersYet")}</p>
             ) : (
               <>
                 <div className="grid grid-cols-[1.4fr_0.9fr_1fr_0.9fr] text-[10px] font-bold text-slate-400 uppercase tracking-wide pb-2 border-b border-slate-100">
-                  <span>Product</span><span>Quantity</span><span>Status</span><span>Date</span>
+                  <span>{t("colProduct")}</span><span>{t("colQuantity")}</span><span>{t("colStatus")}</span><span>{t("colDate")}</span>
                 </div>
                 <div className="divide-y divide-slate-50">
                   {orders.slice(0, 4).map((o) => {
@@ -469,10 +469,10 @@ export default function FarmerDashboard() {
                       <img src={a.imageUrl} alt="Crop" className="w-11 h-11 rounded-lg object-cover shrink-0 bg-slate-100" loading="lazy" />
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-bold text-slate-900 truncate flex items-center gap-1.5">
-                          {a.disease || a.cropName || "Scan"}
-                          <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-extrabold shrink-0 ${sev.cls}`}>{sev.label}</span>
+                          {a.disease || a.cropName || t("scanCrop")}
+                          <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-extrabold shrink-0 ${sev.cls}`}>{t(sev.labelKey)}</span>
                         </p>
-                        <p className="text-[10px] text-slate-500 truncate">Fungal/pest analysis — {a.cropName}</p>
+                        <p className="text-[10px] text-slate-500 truncate">{t("fungalPestAnalysis")} — {a.cropName}</p>
                         <p className="text-[9px] text-slate-400">{fmtDateTime(a.created_at)}</p>
                       </div>
                       <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-emerald-500 transition-colors shrink-0" />
@@ -489,14 +489,14 @@ export default function FarmerDashboard() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Landmark className="w-5 h-5 text-indigo-600" />
-              <h2 className="text-base font-extrabold text-slate-900">Sarkari Yojanaayein</h2>
+              <h2 className="text-base font-extrabold text-slate-900">{t("sarkariYojana")}</h2>
             </div>
             <div className="flex items-center gap-3">
               <Link to="/schemes" className="text-xs font-bold text-emerald-600 hover:underline flex items-center gap-0.5">
-                Check your eligibility <ArrowRight className="w-3.5 h-3.5" />
+                {t("checkEligibility")} <ArrowRight className="w-3.5 h-3.5" />
               </Link>
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                <BadgeCheck className="w-3.5 h-3.5 text-indigo-400" /> Official Portals
+                <BadgeCheck className="w-3.5 h-3.5 text-indigo-400" /> {t("officialPortals")}
               </span>
             </div>
           </div>
@@ -520,7 +520,7 @@ export default function FarmerDashboard() {
                   </div>
                 </div>
                 <div className="mt-2.5 flex items-end justify-between gap-2">
-                  <p className="text-[11px] text-slate-500 leading-snug">{s.desc}</p>
+                  <p className="text-[11px] text-slate-500 leading-snug">{t(s.descKey)}</p>
                   <span className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
                     <ArrowRight className="w-3.5 h-3.5" />
                   </span>
@@ -531,7 +531,7 @@ export default function FarmerDashboard() {
 
           <p className="text-[10px] text-slate-400 mt-3 text-center">
             <Sprout className="w-3 h-3 inline mr-1" />
-            Government of India schemes — always apply free on official websites only
+            {t("govtSchemesNote")}
           </p>
         </div>
       </div>

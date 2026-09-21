@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Sprout, Search, LogOut, LayoutDashboard, Users } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
+import { useLanguage } from "../../contexts/LanguageContext";
 import LanguageSelector from "../common/LanguageSelector";
 
 /**
@@ -11,6 +12,7 @@ import LanguageSelector from "../common/LanguageSelector";
  */
 export default function MerchantNavbar() {
   const { user, logout } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
 
@@ -34,7 +36,7 @@ export default function MerchantNavbar() {
             <Sprout className="w-5 h-5" />
           </span>
           <span className="leading-tight">
-            <span className="block text-base font-extrabold text-slate-900 tracking-tight">AgriNexus</span>
+            <span className="block text-base font-extrabold text-slate-900 tracking-tight">{t("brandName")}</span>
             <span className="block text-[9px] font-bold tracking-widest text-violet-600 uppercase">Merchant Hub</span>
           </span>
         </Link>

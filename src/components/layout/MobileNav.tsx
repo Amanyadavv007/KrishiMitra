@@ -69,13 +69,13 @@ export default function MobileNav() {
   ];
 
   const quickLinks: MenuItem[] = [
-    { to: "/schemes", label: "Govt Schemes", icon: <Landmark className="w-[18px] h-[18px] text-indigo-600" />, hoverBg: "hover:bg-indigo-50" },
+    { to: "/schemes", label: t("sarkariYojana"), icon: <Landmark className="w-[18px] h-[18px] text-indigo-600" />, hoverBg: "hover:bg-indigo-50" },
     { to: "/weather", label: t("weather"), icon: <Activity className="w-[18px] h-[18px] text-sky-600" />, hoverBg: "hover:bg-sky-50" },
     { to: "/inventory", label: t("fasalStock"), icon: <Boxes className="w-[18px] h-[18px] text-emerald-600" />, hoverBg: "hover:bg-emerald-50" },
     { to: "/assistant", label: t("aiAssistant"), icon: <MessageCircle className="w-[18px] h-[18px] text-sky-600" />, hoverBg: "hover:bg-sky-50" },
     { to: "/learn", label: t("fasalSalah"), icon: <GraduationCap className="w-[18px] h-[18px] text-violet-600" />, hoverBg: "hover:bg-violet-50" },
-    { to: "/history", label: "My Crop History", icon: <Camera className="w-[18px] h-[18px] text-slate-600" />, hoverBg: "hover:bg-slate-100" },
-    { to: "/chat", label: "Chat", icon: <MessageCircle className="w-[18px] h-[18px] text-emerald-600" />, hoverBg: "hover:bg-emerald-50" },
+    { to: "/history", label: t("myCropHistory"), icon: <Camera className="w-[18px] h-[18px] text-slate-600" />, hoverBg: "hover:bg-slate-100" },
+    { to: "/chat", label: t("chatBtn"), icon: <MessageCircle className="w-[18px] h-[18px] text-emerald-600" />, hoverBg: "hover:bg-emerald-50" },
   ];
 
   return (

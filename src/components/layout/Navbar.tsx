@@ -35,7 +35,7 @@ export default function Navbar() {
               <Sprout className="w-5 h-5" />
             </div>
             <div>
-              <span className="font-extrabold text-lg tracking-tight text-slate-900 leading-none">AgriNexus</span>
+              <span className="font-extrabold text-lg tracking-tight text-slate-900 leading-none">{t("brandName")}</span>
               <span className="block text-[10px] font-semibold text-emerald-600 mt-0.5 leading-none">समृद्ध खेती, समृद्ध किसान</span>
             </div>
           </Link>
