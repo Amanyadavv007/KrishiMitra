@@ -3,8 +3,8 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Sprout, Search, LogOut, ShoppingBag, HeartHandshake, Package, User } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useCart } from "../../contexts/CartContext";
+import { useLanguage } from "../../contexts/LanguageContext";
 import LanguageSelector from "../common/LanguageSelector";
-import MinistryLogo from "../common/MinistryLogo";
 
 /**
  * Customer-only navbar: logo far-left, search bar in the center,
@@ -15,6 +15,7 @@ import MinistryLogo from "../common/MinistryLogo";
 export default function CustomerNavbar() {
   const { user, logout } = useAuth();
   const { totalItems } = useCart();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const [query, setQuery] = React.useState("");
@@ -44,15 +45,11 @@ export default function CustomerNavbar() {
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center gap-4">
         {/* Far-left: logo */}
         <Link to="/shop" className="flex items-center gap-2.5 shrink-0">
-          <span className="inline-flex">
-            <MinistryLogo className="h-11 w-auto" />
-          </span>
-          <span className="w-px self-stretch my-1.5 bg-slate-200" aria-hidden="true" />
           <span className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-green-500 text-white flex items-center justify-center shadow-md shadow-emerald-500/30">
             <Sprout className="w-5 h-5" />
           </span>
           <span className="leading-tight">
-            <span className="block text-base font-extrabold text-slate-900 tracking-tight">AgriNexus</span>
+            <span className="block text-base font-extrabold text-slate-900 tracking-tight">{t("brandName")}</span>
             <span className="block text-[9px] font-bold tracking-widest text-amber-600 uppercase">Fresh from Farms</span>
           </span>
         </Link>

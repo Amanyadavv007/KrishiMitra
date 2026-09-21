@@ -5,7 +5,6 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useLanguage } from "../../contexts/LanguageContext";
 import LanguageSelector from "../common/LanguageSelector";
 import NotificationBell from "../common/NotificationBell";
-import MinistryLogo from "../common/MinistryLogo";
 
 const MARKET_PATHS = ["/mandi-prices", "/process", "/marketplace", "/supply-chain", "/customer", "/products", "/dealers"];
 const AI_PATHS = ["/digital-twin", "/consensus-engine", "/what-if-simulation", "/agronomy-rag", "/field-mapping"];
@@ -30,17 +29,13 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-3">
 
-          {/* LEFT: Ministry emblem + AgriNexus with Hindi tagline */}
+          {/* LEFT: AgriNexus with Hindi tagline */}
           <Link to="/" className="flex items-center gap-2.5 shrink-0">
-            <span className="inline-flex">
-              <MinistryLogo className="h-11 w-auto" />
-            </span>
-            <span className="w-px self-stretch my-1.5 bg-slate-200" aria-hidden="true" />
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center text-white shadow-md shadow-emerald-500/25">
               <Sprout className="w-5 h-5" />
             </div>
             <div>
-              <span className="font-extrabold text-lg tracking-tight text-slate-900 leading-none">AgriNexus</span>
+              <span className="font-extrabold text-lg tracking-tight text-slate-900 leading-none">{t("brandName")}</span>
               <span className="block text-[10px] font-semibold text-emerald-600 mt-0.5 leading-none">समृद्ध खेती, समृद्ध किसान</span>
             </div>
           </Link>
