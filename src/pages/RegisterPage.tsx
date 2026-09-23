@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Sprout, AlertCircle, MapPin, Navigation, Loader2, CheckCircle, Store, ShoppingBag } from "lucide-react";
+import { Sprout, AlertCircle, MapPin, Navigation, Loader2, CheckCircle, Store, ShoppingBag, ArrowLeft } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import { useLanguage } from "../contexts/LanguageContext";
 
 export default function RegisterPage() {
   const asParam = new URLSearchParams(window.location.search).get("as");
@@ -24,6 +25,7 @@ export default function RegisterPage() {
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const { register } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
 
   // Auto-detect location on mount
@@ -99,7 +101,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-emerald-900 via-emerald-800 to-green-900 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-dvh-fill w-full bg-gradient-to-b from-emerald-900 via-emerald-800 to-green-900 flex items-center justify-center px-4 py-10 relative overflow-hidden">
       {/* Ambient light blooms behind the glass card */}
       <div aria-hidden className="pointer-events-none absolute -top-24 -left-24 w-96 h-96 rounded-full bg-emerald-400/20 blur-3xl" />
       <div aria-hidden className="pointer-events-none absolute -bottom-32 -right-20 w-[28rem] h-[28rem] rounded-full bg-green-400/15 blur-3xl" />
@@ -110,7 +112,7 @@ export default function RegisterPage() {
             <Sprout className="w-7 h-7" />
           </div>
           <h1 className="text-xl font-bold text-white drop-shadow">Naya Account Banayein</h1>
-          <p className="text-xs text-emerald-100/80 mt-1">AgriNexus par register karein</p>
+          <p className="text-xs text-emerald-100/80 mt-1">{t("brandName")} par register karein</p>
           <span
             className={`inline-flex items-center gap-1.5 mt-2.5 px-3 py-1 rounded-full text-[10px] font-bold tracking-wide ${
               asCustomer
@@ -358,6 +360,9 @@ export default function RegisterPage() {
               Login karein
             </Link>
           </p>
+          <Link to="/" className="inline-flex items-center gap-1 text-[11px] text-emerald-100/60 hover:text-emerald-200 mt-2">
+            <ArrowLeft className="w-3 h-3" /> Back to Home
+          </Link>
         </div>
       </div>
     </div>

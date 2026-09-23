@@ -91,7 +91,7 @@ export default function LandingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-dvh-fill bg-slate-50">
       <div className="relative overflow-hidden text-white pt-0 pb-16 px-4">
 
         {/* SVG filter that makes the photo's crops sway (turbulence -> displacement) */}
@@ -145,9 +145,9 @@ export default function LandingPage() {
         <div className="relative z-10 max-w-7xl mx-auto">
           {/* Top Liquid Glass Status Pill */}
           <div className="flex items-center justify-between mb-4">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full liquid-glass-pill text-xs font-semibold text-emerald-200">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-              <span>Smart Indian Agriculture OS · Kharif & Rabi Sync</span>
+            <div className="inline-flex items-center gap-2 max-w-full px-3.5 py-1.5 rounded-full liquid-glass-pill text-xs font-semibold text-emerald-200">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
+              <span className="truncate">Smart Indian Agriculture OS · Kharif & Rabi Sync</span>
             </div>
           </div>
 

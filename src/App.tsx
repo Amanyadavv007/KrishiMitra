@@ -116,6 +116,10 @@ function AppShell() {
   // navbar/mobile nav is hidden there.
   const isMerchantArea = routerLocation.pathname.startsWith("/merchant");
   const isCustomerArea = routerLocation.pathname.startsWith("/shop");
+  // Auth screens are full-bleed: no navbar/footer/bottom-bar, so the
+  // liquid-glass surface fills the entire display on both web and mobile.
+  const isAuthArea =
+    routerLocation.pathname === "/login" || routerLocation.pathname === "/register";
 
   // App opening animation state
   const [splashActive, setSplashActive] = useState(() => {
@@ -153,11 +157,11 @@ function AppShell() {
             <SocketProvider>
               <NotificationBannerToast />
               <div
-                className={`flex flex-col min-h-screen bg-slate-50 text-slate-900 pb-16 lg:pb-0 selection:bg-emerald-500 selection:text-white transition-[filter] duration-300 ${
-                  onboardingOpen ? "blur-onboarding" : ""
-                }`}
+                className={`flex flex-col min-h-dvh-fill text-slate-900 selection:bg-emerald-500 selection:text-white transition-[filter] duration-300 ${
+                  isAuthArea ? "bg-emerald-950" : "bg-slate-50 pb-mobile-nav"
+                } ${onboardingOpen ? "blur-onboarding" : ""}`}
               >
-                {!isMerchantArea && !isCustomerArea && <Navbar />}
+                {!isAuthArea && !isMerchantArea && !isCustomerArea && <Navbar />}
                 {isMerchantArea && <MerchantNavbar />}
                 {isCustomerArea && <CustomerNavbar />}
                 <main className="flex-1">
@@ -313,8 +317,9 @@ function AppShell() {
                       <Route path="/customer" element={<CustomerDashboard />} />
                     </Routes>
                   </Suspense>
-                </main>                <Footer />
-                {!isMerchantArea && !isCustomerArea && <MobileNav />}
+                </main>
+                {!isAuthArea && <Footer />}
+                {!isAuthArea && !isMerchantArea && !isCustomerArea && <MobileNav />}
               </div>
               <LanguageOnboardingModal
                 open={showLangModal}

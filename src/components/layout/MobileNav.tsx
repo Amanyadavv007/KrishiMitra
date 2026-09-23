@@ -106,7 +106,7 @@ export default function MobileNav() {
   return (
     <>
       {/* ---------- Bottom tab bar ---------- */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/85 backdrop-blur-xl border-t border-white/60 px-1 py-1.5 flex items-center justify-around shadow-lg supports-[backdrop-filter]:bg-white/80">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/85 backdrop-blur-xl border-t border-white/60 px-1 py-1.5 safe-bottom flex items-center justify-around shadow-lg supports-[backdrop-filter]:bg-white/80">
         {topTabs.map((tab) => {
           if (tab.market) {
             const isActive = marketItems.some((i) => i.to === pathname);

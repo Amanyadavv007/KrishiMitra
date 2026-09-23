@@ -51,7 +51,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-emerald-900 via-emerald-800 to-green-900 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-dvh-fill w-full bg-gradient-to-b from-emerald-900 via-emerald-800 to-green-900 flex items-center justify-center px-4 py-10 relative overflow-hidden">
       {/* Ambient light blooms behind the glass card */}
       <div aria-hidden className="pointer-events-none absolute -top-24 -left-24 w-96 h-96 rounded-full bg-emerald-400/20 blur-3xl" />
       <div aria-hidden className="pointer-events-none absolute -bottom-32 -right-20 w-[28rem] h-[28rem] rounded-full bg-green-400/15 blur-3xl" />

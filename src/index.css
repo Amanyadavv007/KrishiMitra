@@ -263,3 +263,32 @@
     inset 0 -1px 0 rgba(255, 255, 255, 0.1);
   position: relative;
 }
+
+/* =========================================================================
+   VIEWPORT FILL HELPERS
+   Mobile browsers size 100vh to the *expanded* viewport (address bar hidden),
+   so a min-h-screen glass surface can be taller than what the user actually
+   sees — the glass then looks like it stops short of the display edge.
+   100dvh tracks the visible viewport, with 100vh kept as the fallback for
+   browsers that don't understand dvh yet.
+   ========================================================================= */
+.min-h-dvh-fill {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* Keeps the fixed bottom glass bar clear of the iOS home indicator. */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Reserves room for that fixed bottom bar so the last row of a page is
+   never hidden behind it; reset once the desktop navbar takes over. */
+.pb-mobile-nav {
+  padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 1024px) {
+  .pb-mobile-nav {
+    padding-bottom: 0;
+  }
+}
