@@ -9,6 +9,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.getcapacitor.BridgeActivity;
+import com.getcapacitor.Plugin;
 
 public class MainActivity extends BridgeActivity {
 
@@ -18,6 +19,9 @@ public class MainActivity extends BridgeActivity {
 
   @Override
   public void onCreate(Bundle savedInstanceState) {
+    // Native bridge for the website's "Download App" button: hands the APK
+    // URL to the Android system DownloadManager (see AppDownloaderPlugin).
+    registerPlugin(AppDownloaderPlugin.class);
     super.onCreate(savedInstanceState);
 
     tuneWebView();

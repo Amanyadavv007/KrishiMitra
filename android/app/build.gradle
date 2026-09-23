@@ -11,27 +11,42 @@ android {
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
-             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
-             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
-            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    signingConfigs {
+        release {
+            // CI/dev machines pass these via -Pandroid.injected.signing.*
+            // (see scripts/build-android-apk.sh). Falls back to the debug
+            // key when absent so `gradlew assembleRelease` never hard-fails.
+            if (project.hasProperty('android.injected.signing.store.file')) {
+                storeFile file(project.property('android.injected.signing.store.file'))
+                storePassword project.property('android.injected.signing.store.password')
+                keyAlias project.property('android.injected.signing.key.alias')
+                keyPassword project.property('android.injected.signing.key.password')
+            }
         }
     }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // Sign with the release key when signing props are passed
+            // (-Pandroid.injected.signing.*), else fall back to the debug
+            // key so plain `gradlew assembleRelease` still works locally.
+            signingConfig project.hasProperty('android.injected.signing.store.file') ? signingConfigs.release : signingConfigs.debug
         }
     }
 }
 
 repositories {
-    flatDir{
+    flatDir {
         dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
     }
 }
 
 dependencies {
-    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation fileTree(include: ['*.jar', '*.aar'], dir: 'libs')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
