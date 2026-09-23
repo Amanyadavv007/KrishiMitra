@@ -4,48 +4,8 @@ import { TrendingUp, TrendingDown, MapPin, ArrowRight, BarChart3 } from "lucide-
 import { useLocation } from "../contexts/LocationContext";
 import { useLanguage } from "../contexts/LanguageContext";
 import { saveMandiSnapshot, fetchMandiHistory, todayStr } from "../lib/supabaseData";
+import { MANDI_LOCATIONS } from "../lib/mandiData";
 
-// --- Mandi data (same database as MandiPricePage) ---
-// Shared with the merchant NearestMandiWidget so both worlds read identical data.
-export const MANDI_LOCATIONS: { city: string; state: string; district: string; mandis: string[] }[] = [
-  { city: "Delhi", state: "Delhi", district: "North Delhi", mandis: ["Azadpur Mandi", "Ghazipur Mandi"] },
-  { city: "Delhi", state: "Delhi", district: "East Delhi", mandis: ["Ghazipur Mandi", "Kondli Mandi"] },
-  { city: "Mumbai", state: "Maharashtra", district: "Navi Mumbai", mandis: ["Vashi APMC", "Kharghar Mandi"] },
-  { city: "Pune", state: "Maharashtra", district: "Pune", mandis: ["Pune APMC", "Hadapsar Mandi"] },
-  { city: "Nashik", state: "Maharashtra", district: "Nashik", mandis: ["Nashik APMC", "Pimpalgaon Mandi"] },
-  { city: "Nagpur", state: "Maharashtra", district: "Nagpur", mandis: ["Nagpur APMC", "Sitabuldi Mandi"] },
-  { city: "Bengaluru", state: "Karnataka", district: "Bengaluru", mandis: ["BMIC Market", "Yeshwanthpur APMC"] },
-  { city: "Mysuru", state: "Karnataka", district: "Mysuru", mandis: ["Mysuru APMC"] },
-  { city: "Chennai", state: "Tamil Nadu", district: "Chennai", mandis: ["Koyambedu Market", "Tondiarpet Mandi"] },
-  { city: "Coimbatore", state: "Tamil Nadu", district: "Coimbatore", mandis: ["Coimbatore APMC"] },
-  { city: "Lucknow", state: "Uttar Pradesh", district: "Lucknow", mandis: ["Ghazipur Mandi Lucknow", "Aminabad Mandi"] },
-  { city: "Agra", state: "Uttar Pradesh", district: "Agra", mandis: ["Agra Mandi", "Sadar Bazaar Mandi"] },
-  { city: "Varanasi", state: "Uttar Pradesh", district: "Varanasi", mandis: ["Varanasi Mandi", "Bhadohi Mandi"] },
-  { city: "Kanpur", state: "Uttar Pradesh", district: "Kanpur", mandis: ["Kanpur Mandi", "Jajmau Mandi"] },
-  { city: "Meerut", state: "Uttar Pradesh", district: "Meerut", mandis: ["Meerut Mandi"] },
-  { city: "Ludhiana", state: "Punjab", district: "Ludhiana", mandis: ["Ludhiana Mandi", "Khanna Mandi"] },
-  { city: "Amritsar", state: "Punjab", district: "Amritsar", mandis: ["Amritsar Mandi"] },
-  { city: "Jaipur", state: "Rajasthan", district: "Jaipur", mandis: ["Jaipur APMC", "Sanganer Mandi"] },
-  { city: "Jodhpur", state: "Rajasthan", district: "Jodhpur", mandis: ["Jodhpur APMC"] },
-  { city: "Ahmedabad", state: "Gujarat", district: "Ahmedabad", mandis: ["Ahmedabad APMC", "Naroda Mandi"] },
-  { city: "Surat", state: "Gujarat", district: "Surat", mandis: ["Surat APMC"] },
-  { city: "Bhopal", state: "Madhya Pradesh", district: "Bhopal", mandis: ["Bhopal APMC"] },
-  { city: "Indore", state: "Madhya Pradesh", district: "Indore", mandis: ["Indore APMC", "Pithampur Mandi"] },
-  { city: "Kolkata", state: "West Bengal", district: "Kolkata", mandis: ["Sealdah Mandi", "Howrah Mandi"] },
-  { city: "Patna", state: "Bihar", district: "Patna", mandis: ["Patna APMC", "Bailey Road Mandi"] },
-  { city: "Bhubaneswar", state: "Odisha", district: "Khordha", mandis: ["Bhubaneswar APMC"] },
-  { city: "Cuttack", state: "Odisha", district: "Cuttack", mandis: ["Cuttack APMC", "Mandapada Mandi"] },
-  { city: "Hyderabad", state: "Telangana", district: "Hyderabad", mandis: ["Malkajgiri APMC", "Malakpet Mandi"] },
-  { city: "Vijayawada", state: "Andhra Pradesh", district: "Krishna", mandis: ["Vijayawada APMC"] },
-  { city: "Guwahati", state: "Assam", district: "Kamrup", mandis: ["Fancy Bazar Mandi", "Paltan Bazar Mandi"] },
-  { city: "Ranchi", state: "Jharkhand", district: "Ranchi", mandis: ["Ranchi APMC"] },
-  { city: "Raipur", state: "Chhattisgarh", district: "Raipur", mandis: ["Raipur APMC"] },
-  { city: "Faridabad", state: "Haryana", district: "Faridabad", mandis: ["Faridabad Mandi"] },
-  { city: "Karnal", state: "Haryana", district: "Karnal", mandis: ["Karnal Mandi"] },
-  { city: "Dehradun", state: "Uttarakhand", district: "Dehradun", mandis: ["Dehradun Mandi"] },
-  { city: "Shimla", state: "Himachal Pradesh", district: "Shimla", mandis: ["Shimla Mandi"] },
-  { city: "Srinagar", state: "Jammu & Kashmir", district: "Srinagar", mandis: ["Srinagar Mandi"] },
-];
 
 export const TOP_CROPS = ["Wheat", "Paddy", "Tomato", "Mustard", "Potato"];
 
