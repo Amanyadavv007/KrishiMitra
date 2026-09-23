@@ -1,0 +1,13 @@
+KrishiMitra (AgriNexus) — Android app placeholder.
+
+This file is NOT a working APK yet. Replace this file with your signed
+release build (keep the same filename) and the landing page download
+button will serve it directly:
+
+    android/  ->  assembleRelease output .apk  ->  public/downloads/KrishiMitra.apk
+
+Better long-term option: attach the .apk to a GitHub Release
+(Releases -> Draft a new release -> attach APK -> publish).
+The download button automatically prefers the APK asset from the
+latest GitHub release whenever one exists, so you never have to
+touch the website again.

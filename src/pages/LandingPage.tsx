@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Camera, Sprout, Sun, ShoppingBag, Users, ArrowRight, Sparkles, Package, BarChart3, Store, Truck } from "lucide-react";
 import { useLanguage } from "../contexts/LanguageContext";
 import WeatherWidget from "../components/weather/WeatherWidget";
+import AppDownloadButton from "../components/common/AppDownloadButton";
 import CameraCaptureModal from "../components/camera/CameraCaptureModal";
 import MandiPricesBar from "../components/MandiPricesBar";
 import riceFieldBg from "../assets/rice-field.jpg"; // live wallpaper photo
@@ -132,6 +133,9 @@ export default function LandingPage() {
             willChange: "transform",
           }}
         />
+
+        {/* Android app download — top right corner */}
+        <AppDownloadButton />
 
         {/* Lighter scrim — image shows through clearly, text/buttons stay readable */}
         <div
