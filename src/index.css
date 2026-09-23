@@ -147,6 +147,29 @@
   }
 }
 
+/* --- No-backdrop-filter fallback ---------------------------------------
+   Browsers without backdrop-filter (older Android WebView, some mobile
+   browsers) render .liquid-glass as a nearly invisible dark wash — the
+   "glass not filling the display" look. @supports not gives them a
+   solid-enough frosted equivalent instead. Kept at the end of the glass
+   section so it wins the cascade at equal specificity.
+   ---------------------------------------------------------------------- */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .liquid-glass {
+    background:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.06) 40%, rgba(255, 255, 255, 0.12) 100%),
+      rgba(10, 40, 32, 0.94);
+  }
+  .liquid-glass-card {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.97) 0%, rgba(255, 255, 255, 0.9) 100%);
+  }
+  .liquid-glass-hero {
+    background:
+      linear-gradient(140deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 60%, rgba(16, 185, 129, 0.08) 100%),
+      rgba(6, 40, 28, 0.95);
+  }
+}
+
 /* =========================================================================
    LIQUID GLASS SYSTEM (Apple VisionOS / Fluent Glassmorphism for KrishiMitra)
    Multi-layered specular reflections, refraction borders, and backdrop blurs

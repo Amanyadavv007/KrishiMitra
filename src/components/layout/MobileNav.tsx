@@ -5,7 +5,7 @@ import {
   User, LogOut, Settings as SettingsIcon, Bell, Store, IndianRupee,
   Tractor, BrainCircuit, FlaskConical, Satellite, Map as MapIcon,
   SlidersHorizontal, ShoppingCart, GraduationCap, MessageCircle, Boxes,
-  Package, Handshake, Crown, Landmark,
+  Package, Handshake, Crown, Landmark, Download, Loader2,
 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useLanguage } from "../../contexts/LanguageContext";
@@ -36,6 +36,31 @@ export default function MobileNav() {
 
   // Close sheets on navigation
   useEffect(() => { setOpen(false); setMarketOpen(false); }, [pathname]);
+
+  // Android app download — same GitHub-release-first logic as the desktop pill
+  const [apkBusy, setApkBusy] = useState(false);
+  const handleApkDownload = async () => {
+    if (apkBusy) return;
+    setApkBusy(true);
+    let url = "/downloads/KrishiMitra.apk";
+    try {
+      const res = await fetch(
+        "https://api.github.com/repos/Amanyadavv007/KrishiMitra/releases/latest",
+        { headers: { Accept: "application/vnd.github+json" } }
+      );
+      if (res.ok) {
+        const rel = await res.json();
+        const asset = (rel.assets || []).find((a: { name: string }) => /\.apk$/i.test(a.name));
+        if (asset?.browser_download_url) url = asset.browser_download_url;
+      }
+    } catch { /* offline or rate-limited -> bundled fallback */ }
+    const frame = document.createElement("iframe");
+    frame.style.display = "none";
+    frame.src = url;
+    document.body.appendChild(frame);
+    setTimeout(() => frame.remove(), 60_000);
+    setApkBusy(false);
+  };
 
   // Lock body scroll while a sheet is open
   useEffect(() => {
@@ -209,6 +234,18 @@ export default function MobileNav() {
                 </span>
                 <ChevronRight className="w-4 h-4 text-emerald-100" />
               </Link>
+
+              {/* Android app download — mirrors the desktop navbar Download App pill */}
+              <button
+                onClick={handleApkDownload}
+                className="w-full flex items-center justify-between px-4 py-3 rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-800"
+              >
+                <span className="flex items-center gap-2.5">
+                  <Download className="w-[18px] h-[18px] text-emerald-600" />
+                  <span className="text-sm font-bold">Download Android App</span>
+                </span>
+                {apkBusy ? <Loader2 className="w-4 h-4 animate-spin text-emerald-600" /> : <ChevronRight className="w-4 h-4 text-emerald-500" />}
+              </button>
 
               {/* Direct links (desktop top-level) */}
               <div className="grid grid-cols-2 gap-2">
