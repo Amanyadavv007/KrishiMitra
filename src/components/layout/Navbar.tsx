@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Sprout, User, LogOut, ChevronDown, Settings, Home, Leaf, CloudSun, BarChart3, Sparkles } from "lucide-react";
-import AppDownloadButton from "../common/AppDownloadButton";
 import { useAuth } from "../../contexts/AuthContext";
 import { useLanguage } from "../../contexts/LanguageContext";
 import LanguageSelector from "../common/LanguageSelector";
@@ -18,20 +17,31 @@ export default function Navbar() {
   const [marketOpen, setMarketOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  const handleNavClick = (targetPath: string, e: React.MouseEvent) => {
+    if (pathname === targetPath) {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
   const linkCls = (active: boolean) =>
-    `flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold transition-colors cursor-pointer ${
+    `flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold transition-all duration-150 active:scale-95 cursor-pointer ${
       active
         ? "bg-emerald-600 text-white shadow-sm shadow-emerald-600/30"
-        : "text-slate-700 hover:text-emerald-700 hover:bg-emerald-50"
+        : "text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100"
     }`;
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
+    <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-white/60 shadow-xs supports-[backdrop-filter]:bg-white/75">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-3">
 
           {/* LEFT: AgriNexus with Hindi tagline */}
-          <Link to="/" className="flex items-center gap-2.5 shrink-0">
+          <Link
+            to="/"
+            onClick={(e) => handleNavClick("/", e)}
+            className="flex items-center gap-2.5 shrink-0 active:scale-95 transition-transform duration-150"
+          >
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center text-white shadow-md shadow-emerald-500/25">
               <Sprout className="w-5 h-5" />
             </div>
@@ -43,15 +53,27 @@ export default function Navbar() {
 
           {/* CENTER: pill nav — Dashboard, Crop Checkup, Weather, Market, AI Services */}
           <nav className="hidden lg:flex items-center gap-1 bg-white rounded-full border border-slate-200/90 shadow-xs px-2 py-1.5">
-            <Link to="/dashboard" className={linkCls(pathname === "/dashboard")}>
+            <Link
+              to="/dashboard"
+              onClick={(e) => handleNavClick("/dashboard", e)}
+              className={linkCls(pathname === "/dashboard")}
+            >
               <Home className="w-3.5 h-3.5" />
               <span>{t("dashboard")}</span>
             </Link>
-            <Link to="/analyze" className={linkCls(pathname === "/analyze" || pathname.startsWith("/history"))}>
+            <Link
+              to="/analyze"
+              onClick={(e) => handleNavClick("/analyze", e)}
+              className={linkCls(pathname === "/analyze" || pathname.startsWith("/history"))}
+            >
               <Leaf className="w-3.5 h-3.5" />
               <span>{t("cropCheckup")}</span>
             </Link>
-            <Link to="/weather" className={linkCls(pathname === "/weather")}>
+            <Link
+              to="/weather"
+              onClick={(e) => handleNavClick("/weather", e)}
+              className={linkCls(pathname === "/weather")}
+            >
               <CloudSun className="w-3.5 h-3.5" />
               <span>{t("weather")}</span>
             </Link>
@@ -122,8 +144,11 @@ export default function Navbar() {
             </div>
           </nav>
 
-          {/* RIGHT: subscription CTA + app download + Settings dropdown */}
-          <div className="flex items-center gap-2.5 shrink-0">
+          {/* RIGHT: subscription CTA + Notification Bell + Settings dropdown */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Direct Notification Bell for instant alert access */}
+            <NotificationBell />
+
             {/* KrishiMitra Pro — subscription CTA next to Settings */}
             <Link
               to="/subscription"
@@ -132,9 +157,6 @@ export default function Navbar() {
               <Sparkles className="w-4 h-4" />
               <span className="hidden sm:inline">{t("subscribe")}</span>
             </Link>
-
-            {/* Android app download */}
-            <AppDownloadButton />
 
             {/* Settings Dropdown — language, alerts & account in one place */}
             <div className="relative">
@@ -154,10 +176,6 @@ export default function Navbar() {
                     <div className="flex items-center justify-between px-2 py-1">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t("language")}</span>
                       <LanguageSelector />
-                    </div>
-                    <div className="flex items-center justify-between px-2 py-1">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t("alerts")}</span>
-                      <NotificationBell />
                     </div>
                     <div className="border-t border-slate-100 my-1" />
                     {user ? (

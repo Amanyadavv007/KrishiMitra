@@ -1,6 +1,5 @@
 import React, { Suspense, lazy, useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, useLocation as useRouterLocation } from "react-router-dom";
-import { Loader2 } from "lucide-react";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import { LocationProvider } from "./contexts/LocationContext";
@@ -15,6 +14,12 @@ import RoleSelectModal from "./components/common/RoleSelectModal";
 import MerchantNavbar from "./components/merchant/MerchantNavbar";
 import CustomerNavbar from "./components/customer/CustomerNavbar";
 import RequireRole from "./components/auth/RequireRole";
+import PageLoader from "./components/common/PageLoader";
+import AppOpeningSplash from "./components/common/AppOpeningSplash";
+import ClickFeedback from "./components/common/ClickFeedback";
+import ScrollToTop from "./components/common/ScrollToTop";
+import { NotificationProvider } from "./contexts/NotificationContext";
+import NotificationBannerToast from "./components/common/NotificationBannerToast";
 
 // Landing page loads eagerly (first paint), everything else is code-split
 // so each page downloads only its own JS — dramatically faster navigation.
@@ -71,19 +76,6 @@ const SchemesPage = lazy(() => import("./pages/SchemesPage"));
 const SchemeGapInsightsPage = lazy(() => import("./pages/SchemeGapInsightsPage"));
 
 /**
- * Full-screen themed loading state shown while a lazy page chunk downloads.
- * Kept intentionally light so it renders instantly.
- */
-function PageLoader() {
-  return (
-    <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
-      <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
-      <p className="text-xs font-semibold text-slate-400">Loading...</p>
-    </div>
-  );
-}
-
-/**
  * Warms up the browser cache for the pages a user is most likely to visit
  * next, during idle time. Runs once per session after the app is interactive.
  */
@@ -124,20 +116,42 @@ function AppShell() {
   // navbar/mobile nav is hidden there.
   const isMerchantArea = routerLocation.pathname.startsWith("/merchant");
   const isCustomerArea = routerLocation.pathname.startsWith("/shop");
+
+  // App opening animation state
+  const [splashActive, setSplashActive] = useState(() => {
+    return sessionStorage.getItem("km_splash_viewed") !== "true";
+  });
+
+  useEffect(() => {
+    const handleReplay = () => setSplashActive(true);
+    window.addEventListener("replay-app-splash", handleReplay);
+    return () => window.removeEventListener("replay-app-splash", handleReplay);
+  }, []);
+
+  const handleSplashComplete = () => {
+    sessionStorage.setItem("km_splash_viewed", "true");
+    setSplashActive(false);
+  };
+
   // Popups show on every visit while logged out (no persistence); once logged in, never again.
   const [langSelected, setLangSelected] = useState(false);
   const [roleSelected, setRoleSelected] = useState(false);
-  const showLangModal = !user && !langSelected;
-  const showRoleModal = !user && langSelected && !roleSelected;
-  const onboardingOpen = !user && (!langSelected || !roleSelected);
+  const showLangModal = !user && !langSelected && !splashActive;
+  const showRoleModal = !user && langSelected && !roleSelected && !splashActive;
+  const onboardingOpen = !user && (!langSelected || !roleSelected) && !splashActive;
 
   usePreloadCoreRoutes();
 
   return (
     <>
-        <LanguageProvider>
-          <LocationProvider>
+      <ClickFeedback />
+      <ScrollToTop />
+      {splashActive && <AppOpeningSplash onComplete={handleSplashComplete} />}
+      <LanguageProvider>
+        <LocationProvider>
+          <NotificationProvider>
             <SocketProvider>
+              <NotificationBannerToast />
               <div
                 className={`flex flex-col min-h-screen bg-slate-50 text-slate-900 pb-16 lg:pb-0 selection:bg-emerald-500 selection:text-white transition-[filter] duration-300 ${
                   onboardingOpen ? "blur-onboarding" : ""
@@ -311,8 +325,9 @@ function AppShell() {
                 onSelect={() => setRoleSelected(true)}
               />
             </SocketProvider>
-          </LocationProvider>
-        </LanguageProvider>
+          </NotificationProvider>
+        </LocationProvider>
+      </LanguageProvider>
     </>
   );
 }

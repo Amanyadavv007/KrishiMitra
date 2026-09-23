@@ -1,6 +1,7 @@
 import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import PageLoader from "../common/PageLoader";
 
 interface RequireRoleProps {
   role: "FARMER" | "DEALER" | "ADMIN" | "CUSTOMER";
@@ -18,9 +19,11 @@ export default function RequireRole({ role, children }: RequireRoleProps) {
 
   if (loading) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center text-sm text-slate-400">
-        Loading...
-      </div>
+      <PageLoader
+        message="Verifying account permissions..."
+        subtext="Connecting to agricultural secure gateway"
+        minHeight="min-h-[50vh]"
+      />
     );
   }
 

@@ -712,6 +712,12 @@ export interface TwinField {
   centroid: { lat: number; lng: number };
   coordinates?: { lat: number; lng: number }[]; // drawn boundary (new saves include this)
   savedAt: string;
+  khasraNo?: string;
+  khataNo?: string;
+  village?: string;
+  crop?: string;
+  ndviAverage?: number;
+  ndviStatus?: string;
 }
 
 export function saveTwinField(f: TwinField): void {

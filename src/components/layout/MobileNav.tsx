@@ -81,7 +81,7 @@ export default function MobileNav() {
   return (
     <>
       {/* ---------- Bottom tab bar ---------- */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-1 py-1.5 flex items-center justify-around shadow-lg">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/85 backdrop-blur-xl border-t border-white/60 px-1 py-1.5 flex items-center justify-around shadow-lg supports-[backdrop-filter]:bg-white/80">
         {topTabs.map((tab) => {
           if (tab.market) {
             const isActive = marketItems.some((i) => i.to === pathname);
@@ -89,12 +89,12 @@ export default function MobileNav() {
               <button
                 key="market"
                 onClick={() => setMarketOpen(true)}
-                className={`flex flex-col items-center py-1 px-2 rounded-xl transition-colors cursor-pointer ${
-                  isActive || marketOpen ? "text-emerald-600 font-bold" : "text-slate-500"
+                className={`flex flex-col items-center py-1 px-2 rounded-xl active:scale-90 transition-all duration-150 cursor-pointer ${
+                  isActive || marketOpen ? "text-emerald-600 font-bold" : "text-slate-500 hover:text-slate-700"
                 }`}
                 aria-label={tab.label}
               >
-                <tab.icon className={`w-5 h-5 ${isActive || marketOpen ? "text-emerald-600" : "text-slate-400"}`} />
+                <tab.icon className={`w-5 h-5 transition-transform ${isActive || marketOpen ? "text-emerald-600 scale-110" : "text-slate-400"}`} />
                 <span className="text-[9px] mt-0.5 max-w-[64px] truncate">{tab.label}</span>
               </button>
             );
@@ -104,11 +104,17 @@ export default function MobileNav() {
             <Link
               key={tab.to}
               to={tab.to!}
-              className={`flex flex-col items-center py-1 px-2 rounded-xl transition-colors ${
-                isActive ? "text-emerald-600 font-bold" : "text-slate-500"
+              onClick={(e) => {
+                if (isActive) {
+                  e.preventDefault();
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }
+              }}
+              className={`flex flex-col items-center py-1 px-2 rounded-xl active:scale-90 transition-all duration-150 ${
+                isActive ? "text-emerald-600 font-bold" : "text-slate-500 hover:text-slate-700"
               }`}
             >
-              <tab.icon className={`w-5 h-5 ${isActive ? "text-emerald-600" : "text-slate-400"}`} />
+              <tab.icon className={`w-5 h-5 transition-transform ${isActive ? "text-emerald-600 scale-110" : "text-slate-400"}`} />
               <span className="text-[9px] mt-0.5 max-w-[64px] truncate">{tab.label}</span>
             </Link>
           );
@@ -116,12 +122,12 @@ export default function MobileNav() {
         {/* More button — opens the full menu sheet */}
         <button
           onClick={() => setOpen(true)}
-          className={`flex flex-col items-center py-1 px-2 rounded-xl transition-colors cursor-pointer ${
-            open ? "text-emerald-600 font-bold" : "text-slate-500"
+          className={`flex flex-col items-center py-1 px-2 rounded-xl active:scale-90 transition-all duration-150 cursor-pointer ${
+            open ? "text-emerald-600 font-bold" : "text-slate-500 hover:text-slate-700"
           }`}
           aria-label="More menu"
         >
-          <Menu className={`w-5 h-5 ${open ? "text-emerald-600" : "text-slate-400"}`} />
+          <Menu className={`w-5 h-5 transition-transform ${open ? "text-emerald-600 scale-110" : "text-slate-400"}`} />
           <span className="text-[9px] mt-0.5">More</span>
         </button>
       </div>
@@ -175,13 +181,16 @@ export default function MobileNav() {
                 <Menu className="w-4 h-4 text-emerald-600" />
                 <span className="text-sm font-extrabold text-slate-900">All Features</span>
               </div>
-              <button
-                onClick={() => setOpen(false)}
-                className="p-2 rounded-full bg-slate-100 hover:bg-slate-200 cursor-pointer transition-colors"
-                aria-label="Close menu"
-              >
-                <X className="w-4 h-4 text-slate-600" />
-              </button>
+              <div className="flex items-center gap-2">
+                <NotificationBell />
+                <button
+                  onClick={() => setOpen(false)}
+                  className="p-2 rounded-full bg-slate-100 hover:bg-slate-200 cursor-pointer transition-colors"
+                  aria-label="Close menu"
+                >
+                  <X className="w-4 h-4 text-slate-600" />
+                </button>
+              </div>
             </div>
 
             {/* Scrollable groups — same order/groups as the desktop navbar */}

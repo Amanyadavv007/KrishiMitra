@@ -5,6 +5,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useCart } from "../../contexts/CartContext";
 import { useLanguage } from "../../contexts/LanguageContext";
 import LanguageSelector from "../common/LanguageSelector";
+import NotificationBell from "../common/NotificationBell";
 
 /**
  * Customer-only navbar: logo far-left, search bar in the center,
@@ -99,6 +100,7 @@ export default function CustomerNavbar() {
               <span className="hidden md:inline">{label}</span>
             </Link>
           ))}
+          <NotificationBell />
           <LanguageSelector />
 
           {/* Cart button with item count badge */}

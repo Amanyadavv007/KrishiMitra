@@ -4,6 +4,7 @@ import { Sprout, Search, LogOut, LayoutDashboard, Users } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useLanguage } from "../../contexts/LanguageContext";
 import LanguageSelector from "../common/LanguageSelector";
+import NotificationBell from "../common/NotificationBell";
 
 /**
  * Merchant-only navbar: logo far-left, crop search bar in the center,
@@ -87,6 +88,7 @@ export default function MerchantNavbar() {
             <Users className="w-4 h-4" />
             <span className="hidden md:inline">B2B Contacts</span>
           </Link>
+          <NotificationBell />
           <LanguageSelector />
           {user && (
             <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
