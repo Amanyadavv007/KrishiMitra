@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Sprout, User, LogOut, ChevronDown, Settings, Home, Leaf, CloudSun, BarChart3, Sparkles } from "lucide-react";
+import AppDownloadButton from "../common/AppDownloadButton";
 import { useAuth } from "../../contexts/AuthContext";
 import { useLanguage } from "../../contexts/LanguageContext";
 import LanguageSelector from "../common/LanguageSelector";
@@ -121,7 +122,7 @@ export default function Navbar() {
             </div>
           </nav>
 
-          {/* RIGHT: subscription CTA + Settings dropdown */}
+          {/* RIGHT: subscription CTA + app download + Settings dropdown */}
           <div className="flex items-center gap-2.5 shrink-0">
             {/* KrishiMitra Pro — subscription CTA next to Settings */}
             <Link
@@ -131,6 +132,9 @@ export default function Navbar() {
               <Sparkles className="w-4 h-4" />
               <span className="hidden sm:inline">{t("subscribe")}</span>
             </Link>
+
+            {/* Android app download */}
+            <AppDownloadButton />
 
             {/* Settings Dropdown — language, alerts & account in one place */}
             <div className="relative">
