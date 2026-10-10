@@ -12,7 +12,6 @@ import {
   CheckCheck,
   Trash2,
   ExternalLink,
-  PlusCircle,
   X,
   RefreshCw,
 } from "lucide-react";
@@ -91,7 +90,6 @@ export default function NotificationBell() {
     markAllAsRead,
     deleteNotification,
     clearAll,
-    sendTestAlert,
     refreshRealTimeAlerts,
     isLiveLoading,
   } = useNotifications();
@@ -213,15 +211,8 @@ export default function NotificationBell() {
                   </div>
                   <p className="text-xs font-bold text-slate-700">No alerts in this category</p>
                   <p className="text-[11px] text-slate-400 mt-1 max-w-xs mx-auto">
-                    All weather stations, mandi yards, and crop health scans are currently clear.
+                    Alerts appear here only when a live, location-scoped condition needs action.
                   </p>
-                  <button
-                    onClick={() => sendTestAlert(activeFilter === "all" ? "weather" : activeFilter)}
-                    className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold border border-emerald-200 transition-colors cursor-pointer"
-                  >
-                    <PlusCircle className="w-3.5 h-3.5" />
-                    <span>Simulate Field Alert</span>
-                  </button>
                 </div>
               ) : (
                 filteredNotifications.map((notif) => (
@@ -305,13 +296,7 @@ export default function NotificationBell() {
 
             {/* Tray Footer */}
             <div className="shrink-0 p-2.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-              <button
-                onClick={() => sendTestAlert("weather")}
-                className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 hover:text-emerald-800 active:scale-95 transition-transform cursor-pointer"
-              >
-                <PlusCircle className="w-3.5 h-3.5" />
-                <span>+ Simulate Alert</span>
-              </button>
+              <span>Only actionable live alerts are shown.</span>
 
               {notifications.length > 0 && (
                 <button

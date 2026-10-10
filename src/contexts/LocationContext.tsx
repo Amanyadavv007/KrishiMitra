@@ -36,7 +36,7 @@ async function reverseGeocode(lat: number, lon: number): Promise<{ city: string;
       return { city, district, state };
     }
   } catch (err) {
-    console.warn("Reverse geocode failed, using defaults");
+    console.warn("Reverse geocode failed; keeping neutral location labels");
   }
   return { city: "Delhi", district: "New Delhi", state: "Delhi" };
 }
@@ -56,6 +56,8 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
 
     if (!navigator.geolocation) {
       setError("Geolocation is not supported by your browser");
+      setLatitude(null);
+      setLongitude(null);
       setLoading(false);
       return;
     }
@@ -74,13 +76,15 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
       },
       (err) => {
-        console.warn("Geolocation permission denied, using defaults:", err.message);
-        // Use Delhi defaults when location permission is denied
-        setLatitude(28.6139);
-        setLongitude(77.2090);
-        setCity("Delhi");
-        setDistrict("New Delhi");
-        setState("Delhi");
+        console.warn("Geolocation permission denied; live location alerts are disabled:", err.message);
+        // Keep labels for the rest of the UI, but leave coordinates null so the
+        // notification service cannot generate an alert for an unrelated city.
+        setLatitude(null);
+        setLongitude(null);
+        setCity("Location unavailable");
+        setDistrict("Location unavailable");
+        setState("");
+        setError("Location permission is required for local weather alerts.");
         setLoading(false);
       },
       { timeout: 10000, enableHighAccuracy: false }
