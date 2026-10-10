@@ -3,7 +3,7 @@ import {
   Activity, RefreshCw, Zap, Droplet, Sun, Sprout, ShieldCheck, MapPin,
   AlertTriangle, TrendingUp, Layers, Tractor, FlaskConical, Bug, CloudRain,
   Map as MapIcon, Ruler, Pencil, Crosshair, Sparkles, CheckCircle2,
-  Eye,
+  Search, Eye, ShieldAlert, FileText, ChevronRight, Check,
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -12,6 +12,9 @@ import {
   fetchTwinState, loadTwinField, saveTwinField, wiltThreshold, getStateClimate,
   type TwinState, type TwinAdvisory, type TwinProjectionPoint, type TwinField,
 } from "../lib/digitalTwinData";
+import {
+  searchOrCreateKhasraParcelAsync, VERIFIED_LAND_RECORDS, INDIAN_STATES, UP_CADASTRAL_DATABASE, type LandRecordParcel,
+} from "../lib/khasraLandLookup";
 import PmfbyEvidenceExport from "../components/digitaltwin/PmfbyEvidenceExport";
 
 const ADVISORY_STYLE: Record<TwinAdvisory["severity"], { border: string; bg: string; icon: React.ReactNode }> = {
@@ -46,10 +49,11 @@ function MoistureBar({ label, value, threshold }: { label: string; value: number
   );
 }
 
-// Tapped corners arrive in whatever order the farmer taps, which makes Leaflet
-// draw a self-intersecting "bow-tie" and inflates the acreage. Re-order the
-// points by bearing around their centroid so the outline is always one simple
-// loop (a proper rectangle, L-shape, etc.).
+/**
+ * Order drawn points around their centroid so the boundary can never render
+ * (or measure) as a self-intersecting bow-tie, no matter what order the
+ * farmer taps the corners in.
+ */
 function orderBoundary(pts: { lat: number; lng: number }[]): { lat: number; lng: number }[] {
   if (pts.length < 3) return pts;
   const cLat = pts.reduce((s, p) => s + p.lat, 0) / pts.length;
@@ -59,39 +63,44 @@ function orderBoundary(pts: { lat: number; lng: number }[]): { lat: number; lng:
   );
 }
 
-// ---------------- Satellite Farm Map — location-first manual boundary drawing ----------------
+// ---------------- Satellite Farm Map with Khasra Locator & NDVI Crop Vigor ----------------
 function FarmMap({
-  field, onFieldSaved,
+  field, lat, lon, district, state, onFieldSaved,
 }: {
   field: ReturnType<typeof loadTwinField>;
+  lat: number;
+  lon: number;
+  district: string;
+  state: string;
   onFieldSaved: () => void;
 }) {
-  const { latitude, longitude, loading: locationLoading, error: locationError, refreshLocation } = useLocation();
-
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const polyRef = useRef<L.Polygon | null>(null);
   const ndviLayerRef = useRef<L.LayerGroup | null>(null);
   const markerRefs = useRef<L.Marker[]>([]);
-  const hereMarkerRef = useRef<L.CircleMarker | null>(null);
 
   const [drawing, setDrawing] = useState(false);
   const [pts, setPts] = useState<{ lat: number; lng: number }[]>(field?.coordinates ?? []);
   const [activeLayer, setActiveLayer] = useState<"SATELLITE" | "NDVI" | "MOISTURE">("SATELLITE");
-  const [plotName, setPlotName] = useState(field?.name || "");
-  const [savedNote, setSavedNote] = useState<string | null>(null);
 
-  const hasLocation = latitude != null && longitude != null;
+  // Khasra lookup input state
+  const [selectedState, setSelectedState] = useState(state || "Uttar Pradesh");
+  const [selectedDistrict, setSelectedDistrict] = useState("Gautam Buddha Nagar");
+  const [selectedTehsil, setSelectedTehsil] = useState("Jewar (Agricultural Belt)");
+  const [khasraInput, setKhasraInput] = useState(field?.khasraNo || "");
+  const [searchingLand, setSearchingLand] = useState(false);
+  const [selectedParcel, setSelectedParcel] = useState<LandRecordParcel | null>(null);
+  const [lookupFeedback, setLookupFeedback] = useState<string | null>(null);
+  const [showLookupBox, setShowLookupBox] = useState(false);
 
-  // Init map once — start on the saved plot when there is one, otherwise on India
-  // until the farmer grants location access (then we fly to their field below).
+  // Init map once
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
-    const hasSavedPlot = !!field?.centroid;
-    const center: [number, number] = hasSavedPlot
-      ? [field!.centroid.lat, field!.centroid.lng]
-      : [22.9734, 78.6569];
-    const map = L.map(containerRef.current, { zoomControl: true }).setView(center, hasSavedPlot ? 17 : 5);
+    const center: [number, number] = field?.centroid
+      ? [field.centroid.lat, field.centroid.lng]
+      : [lat, lon];
+    const map = L.map(containerRef.current, { zoomControl: true }).setView(center, 17);
     L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
       attribution: "Imagery &copy; Esri, Maxar, Earthstar Geographics",
       maxZoom: 19,
@@ -104,36 +113,10 @@ function FarmMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Once location permission is granted, drop a "You are here" pin and shift the
-  // map straight to the farmer's field. Only re-center while no boundary has been
-  // traced yet, so we never yank the map away from a plot being drawn.
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || latitude == null || longitude == null) return;
-
-    if (hereMarkerRef.current) {
-      map.removeLayer(hereMarkerRef.current);
-      hereMarkerRef.current = null;
-    }
-    const marker = L.circleMarker([latitude, longitude], {
-      radius: 8,
-      color: "#ffffff",
-      fillColor: "#2563eb",
-      fillOpacity: 1,
-      weight: 3,
-    }).addTo(map);
-    marker.bindTooltip("You are here", { direction: "top" });
-    hereMarkerRef.current = marker;
-
-    if (pts.length === 0) {
-      map.setView([latitude, longitude], 18);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [latitude, longitude]);
-
-  // Compute live area from the ordered boundary (a simple, non-crossing loop)
+  // Compute live area
   const acres = useMemo(() => {
     if (pts.length < 3) return 0;
+    // Measure the ordered ring — tap order must not distort the area.
     const chain = orderBoundary(pts);
     const R = 6371000;
     let area = 0;
@@ -165,12 +148,8 @@ function FarmMap({
     markerRefs.current.forEach((m) => map.removeLayer(m));
     markerRefs.current = [];
 
-    // Re-order tapped corners into one simple loop so the outline is a proper
-    // boundary (rectangle / L-shape) instead of a self-crossing bow-tie.
-    const chain = orderBoundary(pts);
-
-    if (chain.length >= 3) {
-      const latlngs = chain.map((p) => [p.lat, p.lng] as [number, number]);
+    if (pts.length >= 3) {
+      const latlngs = orderBoundary(pts).map((p) => [p.lat, p.lng] as [number, number]);
 
       // Style polygon depending on view mode
       let strokeColor = "#10b981"; // green default
@@ -226,8 +205,8 @@ function FarmMap({
       }
     }
 
-    // Corner control points (numbered in boundary order)
-    chain.forEach((p, idx) => {
+    // Corner control points
+    pts.forEach((p, idx) => {
       const m = L.circleMarker([p.lat, p.lng], {
         radius: 6,
         color: "#ffffff",
@@ -244,12 +223,54 @@ function FarmMap({
     redraw();
   }, [redraw]);
 
-  // Ask the browser for the farmer's GPS position. On grant the LocationContext
-  // updates latitude/longitude and the effect above flies the map to their field.
-  const requestLocation = () => refreshLocation();
+  // Handle Khasra search & instant polygon plot positioning
+  const handleKhasraSearch = async (
+    queryOverride?: string,
+    stateOverride?: string,
+    districtOverride?: string,
+    tehsilOverride?: string
+  ) => {
+    const q = queryOverride || khasraInput;
+    if (!q.trim()) return;
 
-  const startMapping = () => {
-    if (!drawing) toggleDrawing();
+    const targetState = stateOverride || selectedState || "Uttar Pradesh";
+    const targetDistrict = districtOverride || selectedDistrict || "Gautam Buddha Nagar";
+    const targetTehsil = tehsilOverride || selectedTehsil;
+
+    setSearchingLand(true);
+    setLookupFeedback(`Locating Khasra ${q.trim()} in ${targetDistrict} (${targetTehsil})...`);
+
+    try {
+      const map = mapRef.current;
+      const centerLat = map ? map.getCenter().lat : lat;
+      const centerLng = map ? map.getCenter().lng : lon;
+
+      const parcel = await searchOrCreateKhasraParcelAsync(
+        q,
+        targetState,
+        targetDistrict,
+        targetTehsil,
+        centerLat,
+        centerLng
+      );
+      setSelectedParcel(parcel);
+      setPts(parcel.boundary);
+
+      const locationLabel = parcel.formattedAddress
+        ? `${parcel.khasraNo}: ${parcel.village}, ${parcel.tehsil}, ${parcel.district} • ${parcel.areaAcres} Acres`
+        : `Found Khasra ${parcel.khasraNo} (${parcel.village}, ${parcel.district}) • ${parcel.areaAcres} Acres`;
+
+      setLookupFeedback(locationLabel);
+
+      if (map) {
+        map.setView([parcel.centroid.lat, parcel.centroid.lng], 17);
+      }
+    } catch (err) {
+      console.error("Land lookup error:", err);
+      setLookupFeedback("Could not complete land search. Please verify your query.");
+    } finally {
+      setSearchingLand(false);
+    }
   };
 
   const toggleDrawing = () => {
@@ -268,6 +289,8 @@ function FarmMap({
 
   const clearPts = () => {
     setPts([]);
+    setSelectedParcel(null);
+    setLookupFeedback(null);
     const map = mapRef.current;
     if (map) map.off("click");
     setDrawing(false);
@@ -275,28 +298,40 @@ function FarmMap({
 
   const saveField = () => {
     if (pts.length < 3) return;
+    // Save the clean, ordered ring regardless of tap order.
     const boundary = orderBoundary(pts);
     const centroid = {
       lat: boundary.reduce((a, p) => a + p.lat, 0) / boundary.length,
       lng: boundary.reduce((a, p) => a + p.lng, 0) / boundary.length,
     };
 
+    const plotName = selectedParcel
+      ? `Khasra ${selectedParcel.khasraNo}, ${selectedParcel.village}`
+      : khasraInput.trim()
+        ? `Khasra ${khasraInput.trim()} Plot`
+        : "My Farm Plot";
+
     saveTwinField({
-      name: plotName.trim() || "My Farm Plot",
-      areaAcres: acres,
+      name: plotName,
+      areaAcres: selectedParcel?.areaAcres || acres,
       centroid,
       coordinates: boundary,
       savedAt: new Date().toISOString(),
+      khasraNo: selectedParcel?.khasraNo || khasraInput || undefined,
+      khataNo: selectedParcel?.khataNo,
+      village: selectedParcel?.village,
+      crop: selectedParcel?.currentCrop,
+      ndviAverage: selectedParcel?.ndviAverage,
+      ndviStatus: selectedParcel?.ndviStatus,
     });
 
     onFieldSaved();
-    setSavedNote("Field saved and linked to Digital Twin!");
-    setTimeout(() => setSavedNote(null), 3500);
+    setLookupFeedback("Field saved and linked to Digital Twin!");
   };
 
   return (
     <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
-      {/* Top Header */}
+      {/* Top Header & Search Bar */}
       <div className="p-5 pb-3.5 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -308,11 +343,9 @@ function FarmMap({
                 My Farm Land Map
               </h2>
               <p className="text-xs text-slate-500">
-                {field
-                  ? `${field.name} • ${field.areaAcres} acres mapped`
-                  : hasLocation
-                  ? "Location ready — trace your field boundary on the map below"
-                  : "Allow location access, then trace your field on the map"}
+                {field?.khasraNo
+                  ? `Khasra #${field.khasraNo} • ${field.areaAcres} acres • ${field.village || district}`
+                  : "Search your Khasra / Survey number to automatically locate your field"}
               </p>
             </div>
           </div>
@@ -323,29 +356,27 @@ function FarmMap({
             <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200/80 text-xs">
               <button
                 onClick={() => setActiveLayer("SATELLITE")}
-                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                  activeLayer === "SATELLITE"
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${activeLayer === "SATELLITE"
                     ? "bg-white text-slate-900 shadow-xs"
                     : "text-slate-600 hover:text-slate-900"
-                }`}
+                  }`}
               >
                 Satellite
               </button>
               <button
                 onClick={() => setActiveLayer("NDVI")}
-                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                  activeLayer === "NDVI"
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1 ${activeLayer === "NDVI"
                     ? "bg-emerald-600 text-white shadow-xs"
                     : "text-emerald-700 hover:text-emerald-900"
-                }`}
+                  }`}
               >
                 <Eye className="w-3 h-3" />
                 <span>NDVI Vigor</span>
               </button>
             </div>
 
-            {/* Manual Boundary Button — only once the map knows where the field is */}
-            {(hasLocation || field?.centroid) && (!drawing ? (
+            {/* Manual Boundary Button */}
+            {!drawing ? (
               <button
                 onClick={toggleDrawing}
                 className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer border border-slate-200"
@@ -365,89 +396,176 @@ function FarmMap({
                   Done
                 </button>
               </div>
-            ))}
+            )}
           </div>
         </div>
 
-        {/* --- LOCATION-FIRST MAPPING (no Khasra / survey number needed) --- */}
-        <div className="bg-gradient-to-r from-emerald-50 via-teal-50/50 to-slate-50 p-3.5 rounded-2xl border border-emerald-200/80 space-y-3">
-          {!hasLocation ? (
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <span className="p-2.5 rounded-2xl bg-white text-emerald-600 border border-emerald-200 shadow-xs shrink-0">
-                <Crosshair className="w-5 h-5" />
-              </span>
-              <div className="flex-1">
-                <p className="text-sm font-bold text-slate-900">Allow location to map your land</p>
-                <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
-                  {locationError
-                    ? "Location access is blocked. Enable it for this site in your browser settings, then tap Try again."
-                    : "We use your device GPS to jump the map straight to your field — no Khasra or survey number required. You then trace your plot by tapping its corners."}
-                </p>
-              </div>
-              <button
-                onClick={requestLocation}
-                disabled={locationLoading}
-                className="shrink-0 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60"
+        {/* --- SIMPLE KHASRA NUMBER LOCATOR (State-First Workflow for Farmers) --- */}
+        <div className="bg-gradient-to-r from-emerald-50 via-teal-50/50 to-slate-50 p-3.5 rounded-2xl border border-emerald-200/80 space-y-2.5">
+          {/* State & District Selectors */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-xl border border-emerald-300/80 text-xs shadow-2xs">
+              <span className="text-[11px] font-bold text-emerald-800">State:</span>
+              <select
+                value={selectedState}
+                onChange={(e) => {
+                  const newState = e.target.value;
+                  setSelectedState(newState);
+                  if (newState === "Uttar Pradesh") {
+                    setSelectedDistrict("Gautam Buddha Nagar (Noida/Gr. Noida)");
+                  }
+                }}
+                className="bg-transparent font-semibold text-slate-800 focus:outline-none cursor-pointer text-xs"
               >
-                {locationLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Crosshair className="w-3.5 h-3.5" />}
-                <span>{locationLoading ? "Getting location…" : locationError ? "Try again" : "Allow Location Access"}</span>
-              </button>
+                {INDIAN_STATES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
             </div>
-          ) : (
-            <div className="space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <span className="p-2.5 rounded-2xl bg-white text-emerald-600 border border-emerald-200 shadow-xs shrink-0">
-                  <CheckCircle2 className="w-5 h-5" />
-                </span>
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-slate-900">Location found — map centered on your field</p>
-                  <p className="text-xs text-slate-600 mt-0.5">
-                    {latitude!.toFixed(5)}°N, {longitude!.toFixed(5)}°E — now trace your plot boundary by tapping its corners.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={() => mapRef.current?.setView([latitude!, longitude!], 18)}
-                    className="px-3 py-2 rounded-xl bg-white border border-emerald-200 text-emerald-700 text-xs font-bold hover:bg-emerald-50 transition-colors cursor-pointer"
+
+            {selectedState === "Uttar Pradesh" && (
+              <>
+                <div className="flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-xl border border-emerald-300/80 text-xs shadow-2xs">
+                  <span className="text-[11px] font-bold text-emerald-800">District:</span>
+                  <select
+                    value={selectedDistrict}
+                    onChange={(e) => {
+                      const newDist = e.target.value;
+                      setSelectedDistrict(newDist);
+                      const distObj = UP_CADASTRAL_DATABASE[newDist];
+                      if (distObj) {
+                        const firstTehsil = Object.keys(distObj.tehsils)[0];
+                        setSelectedTehsil(firstTehsil);
+                      }
+                    }}
+                    className="bg-transparent font-semibold text-slate-800 focus:outline-none cursor-pointer text-xs max-w-[170px]"
                   >
-                    Re-center
-                  </button>
-                  {!drawing && (
-                    <button
-                      onClick={startMapping}
-                      className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                      <span>{pts.length > 0 ? "Keep mapping" : "Start mapping my land"}</span>
-                    </button>
-                  )}
+                    {Object.keys(UP_CADASTRAL_DATABASE).map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              </div>
 
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                <label className="text-[11px] font-bold text-emerald-800 shrink-0">Plot name</label>
-                <input
-                  type="text"
-                  value={plotName}
-                  onChange={(e) => setPlotName(e.target.value)}
-                  placeholder="e.g. North Field"
-                  className="flex-1 w-full px-3 py-2 bg-white rounded-xl border border-emerald-300/80 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs placeholder:text-slate-400"
-                />
-              </div>
+                <div className="flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-xl border border-emerald-300/80 text-xs shadow-2xs">
+                  <span className="text-[11px] font-bold text-emerald-800">Tehsil:</span>
+                  <select
+                    value={selectedTehsil}
+                    onChange={(e) => setSelectedTehsil(e.target.value)}
+                    className="bg-transparent font-semibold text-slate-800 focus:outline-none cursor-pointer text-xs max-w-[190px]"
+                  >
+                    {UP_CADASTRAL_DATABASE[selectedDistrict]?.tehsils &&
+                      Object.keys(UP_CADASTRAL_DATABASE[selectedDistrict].tehsils).map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              </>
+            )}
+
+            <a
+              href="https://upbhulekh.gov.in/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[11px] text-emerald-700 hover:text-emerald-800 font-semibold underline underline-offset-2 ml-auto hidden sm:inline"
+              title="Official Government of Uttar Pradesh Land Records Portal"
+            >
+              UP Bhulekh Portal (upbhulekh.gov.in) ↗
+            </a>
+          </div>
+
+          {/* Search bar & Locate Button */}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-emerald-600 absolute left-3 top-3" />
+              <input
+                type="text"
+                value={khasraInput}
+                onChange={(e) => setKhasraInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleKhasraSearch()}
+                placeholder="Enter Khasra / Survey No. (e.g. 412/1, 142/1, 74/2, 95)"
+                className="w-full pl-9 pr-3 py-2 bg-white rounded-xl border border-emerald-300/80 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs placeholder:text-slate-400"
+              />
             </div>
-          )}
+            <button
+              onClick={() => handleKhasraSearch()}
+              disabled={searchingLand}
+              className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60"
+            >
+              {searchingLand ? (
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Search className="w-3.5 h-3.5" />
+              )}
+              <span>{searchingLand ? "Locating..." : "Locate Land"}</span>
+            </button>
+          </div>
 
-          {drawing && (
-            <div className="text-[11px] font-semibold text-emerald-800 bg-white/90 p-2.5 rounded-xl border border-emerald-200 shadow-2xs flex items-center gap-1.5">
-              <Pencil className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>Tap each corner of your field in any order ({pts.length} placed, minimum 3) — they'll be joined into a clean boundary. Then press <b>Done</b>.</span>
-            </div>
-          )}
+          {/* Quick sample tags */}
+          <div className="flex items-center gap-1.5 flex-wrap text-[11px] text-slate-600">
+            <span className="font-semibold text-emerald-800">Quick Samples:</span>
+            <button
+              onClick={() => {
+                const sample = "45";
+                setSelectedState("Uttar Pradesh");
+                setSelectedDistrict("Gautam Buddha Nagar");
+                setSelectedTehsil("Jewar (Agricultural Belt)");
+                setKhasraInput(sample);
+                handleKhasraSearch(sample, "Uttar Pradesh", "Gautam Buddha Nagar", "Jewar (Agricultural Belt)");
+              }}
+              className="px-2 py-0.5 rounded-md bg-white hover:bg-emerald-100/60 border border-emerald-300 text-emerald-800 font-semibold transition-colors cursor-pointer"
+            >
+              🌾 Khasra #45 (Jewar Farm Belt)
+            </button>
+            <button
+              onClick={() => {
+                const sample = "412/1";
+                setSelectedState("Uttar Pradesh");
+                setSelectedDistrict("Gautam Buddha Nagar");
+                setSelectedTehsil("Dankaur (Farming Plains)");
+                setKhasraInput(sample);
+                handleKhasraSearch(sample, "Uttar Pradesh", "Gautam Buddha Nagar", "Dankaur (Farming Plains)");
+              }}
+              className="px-2 py-0.5 rounded-md bg-white hover:bg-emerald-100/60 border border-emerald-300 text-emerald-800 font-semibold transition-colors cursor-pointer"
+            >
+              🌾 Khasra #412/1 (Dankaur Rural)
+            </button>
+            <button
+              onClick={() => {
+                const sample = "Plot Number 2 (Sector-17 A, Yamuna Expressway, Greater Noida)";
+                setSelectedState("Uttar Pradesh");
+                setSelectedDistrict("Gautam Buddha Nagar");
+                setKhasraInput(sample);
+                handleKhasraSearch(sample, "Uttar Pradesh", "Gautam Buddha Nagar");
+              }}
+              className="px-2 py-0.5 rounded-md bg-white hover:bg-emerald-100/60 border border-emerald-300 text-emerald-800 font-semibold transition-colors cursor-pointer"
+            >
+              🎓 Galgotias / Sec-17A Gr. Noida
+            </button>
+            <button
+              onClick={() => {
+                const sample = "74/2";
+                setSelectedState("Uttar Pradesh");
+                setSelectedDistrict("Hapur");
+                setSelectedTehsil("Dhaulana (Sugarcane Hub)");
+                setKhasraInput(sample);
+                handleKhasraSearch(sample, "Uttar Pradesh", "Hapur", "Dhaulana (Sugarcane Hub)");
+              }}
+              className="px-2 py-0.5 rounded-md bg-white hover:bg-emerald-100/60 border border-emerald-200 text-slate-700 font-medium transition-colors cursor-pointer"
+            >
+              Khasra #74/2 (Hapur Sugarcane)
+            </button>
+          </div>
 
-          {savedNote && (
+          {lookupFeedback && (
             <div className="text-xs font-semibold text-emerald-800 flex items-center gap-1.5 bg-white/90 p-2.5 rounded-xl border border-emerald-200 shadow-2xs">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>{savedNote}</span>
+              <span>{lookupFeedback}</span>
             </div>
           )}
         </div>
@@ -464,7 +582,7 @@ function FarmMap({
               <span className="flex items-center gap-1 text-emerald-400">
                 <Sprout className="w-3.5 h-3.5" /> NDVI Crop Vigor Index
               </span>
-              <span className="text-white">Avg: 0.72</span>
+              <span className="text-white">Avg: {selectedParcel?.ndviAverage || 0.72}</span>
             </div>
             <div className="w-full h-2 rounded-full bg-gradient-to-r from-amber-400 via-lime-500 to-emerald-600" />
             <div className="flex justify-between text-[10px] text-slate-300">
@@ -478,32 +596,48 @@ function FarmMap({
         )}
       </div>
 
-      {/* Field Metrics & Save Footer */}
+      {/* Parcel Metadata & Save Footer */}
       <div className="p-5 pt-3.5 bg-slate-50 border-t border-slate-200/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex flex-wrap items-center gap-4 text-xs text-slate-600">
           <span className="flex items-center gap-1.5 font-bold text-slate-800">
             <Ruler className="w-3.5 h-3.5 text-emerald-600" />
-            {acres > 0
-              ? `${acres} acres traced`
-              : field
-              ? `${field.areaAcres} acres (saved)`
-              : "0.0 acres traced"}
+            {selectedParcel
+              ? `${selectedParcel.areaAcres} acres (${selectedParcel.areaHectares} ha)`
+              : acres > 0
+                ? `${acres} acres traced`
+                : field
+                  ? `${field.areaAcres} acres (saved)`
+                  : "0.0 acres"}
           </span>
 
-          {field && (
-            <span className="flex items-center gap-1 text-slate-700 font-semibold">
-              <MapPin className="w-3.5 h-3.5 text-emerald-600" />
-              {field.name}
-            </span>
+          {selectedParcel && (
+            <>
+              <span className="flex items-center gap-1 text-slate-700 font-semibold">
+                <MapPin className="w-3.5 h-3.5 text-emerald-600" />
+                {selectedParcel.village}, Tehsil {selectedParcel.tehsil}
+              </span>
+              <span className="flex items-center gap-1 text-slate-500">
+                <span className="font-bold text-slate-700">Crop:</span> {selectedParcel.currentCrop}
+              </span>
+            </>
           )}
 
           <span className="flex items-center gap-1 text-slate-400 text-[11px]">
             <Crosshair className="w-3 h-3" />
-            {hasLocation ? `${latitude!.toFixed(4)}°N, ${longitude!.toFixed(4)}°E` : "Location not set"}
+            {lat.toFixed(4)}°N, {lon.toFixed(4)}°E
           </span>
         </div>
 
         <div className="flex items-center gap-2">
+          <a
+            href="https://upbhulekh.gov.in/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200 transition-colors inline-flex items-center gap-1"
+          >
+            <span>Verify on UP Bhulekh</span>
+            <ChevronRight className="w-3 h-3 text-slate-400" />
+          </a>
           {pts.length > 0 && (
             <button
               onClick={clearPts}
@@ -537,6 +671,10 @@ export default function DigitalTwinPage() {
   const [fieldSavedTick, setFieldSavedTick] = useState(0);
   const [twinCoords, setTwinCoords] = useState<{ lat: number; lon: number } | null>(null);
 
+  // AI Predictor State
+  const [predictedCrop, setPredictedCrop] = useState<string | null>(null);
+  const [predicting, setPredicting] = useState(false);
+
   const field = useMemo(() => loadTwinField(), [fieldSavedTick]);
 
   const load = useCallback((force = false) => {
@@ -564,6 +702,28 @@ export default function DigitalTwinPage() {
     setPulsing(true);
     load(true);
     setTimeout(() => setPulsing(false), 1200);
+  };
+
+  const handlePredict = async (ph: number, moisture: number, temperature: number, rainfall: number) => {
+    setPredicting(true);
+    setPredictedCrop(null);
+    try {
+      const res = await fetch("http://localhost:5000/api/digital-twin/predict-crop", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ph, moisture, temperature, rainfall }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPredictedCrop(data.prediction);
+      } else {
+        alert("Prediction failed: " + data.message);
+      }
+    } catch (err) {
+      alert("Error contacting prediction service");
+    } finally {
+      setPredicting(false);
+    }
   };
 
   if (loading && !twin) {
@@ -607,6 +767,11 @@ export default function DigitalTwinPage() {
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold mb-2">
               <Activity className="w-3.5 h-3.5" />
               <span>Live Farm Digital Twin</span>
+              {field?.khasraNo && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 text-[10px] font-bold">
+                  Khasra #{field.khasraNo}
+                </span>
+              )}
               {t.isEstimated && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold" title="Live satellite data temporarily unavailable — showing climate-based estimate">
                   <AlertTriangle className="w-3 h-3" /> Estimated
@@ -649,9 +814,13 @@ export default function DigitalTwinPage() {
           </div>
         </div>
 
-        {/* ===== 1. FARM MAP — location-first boundary drawing & NDVI overlay ===== */}
+        {/* ===== 1. FARM MAP (with Khasra locator & NDVI heat overlay) ===== */}
         <FarmMap
           field={field}
+          lat={t.lat}
+          lon={t.lon}
+          district={t.district}
+          state={t.state}
           onFieldSaved={() => setFieldSavedTick((x) => x + 1)}
         />
 
@@ -679,6 +848,46 @@ export default function DigitalTwinPage() {
                 </div>
               );
             })}
+          </div>
+        </div>
+
+        {/* ===== NEW: AI CROP PREDICTOR ===== */}
+        <div className="bg-gradient-to-r from-emerald-600 to-teal-700 rounded-3xl p-6 sm:p-8 shadow-md text-white space-y-4">
+          <div className="flex items-center gap-2">
+            <span className="p-2 rounded-xl bg-white/20"><Sparkles className="w-5 h-5" /></span>
+            <div>
+              <h2 className="text-lg font-bold leading-tight">AI Machine Learning Crop Predictor</h2>
+              <p className="text-xs text-emerald-100">
+                Uses our Random Forest model to analyze live farm data and recommend the best crop.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white/10 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border border-white/20">
+            <div className="grid grid-cols-2 gap-4 text-sm font-semibold">
+              <div><span className="text-emerald-200">Soil pH:</span> {t.ph}</div>
+              <div><span className="text-emerald-200">Moisture:</span> {rootZone}%</div>
+              <div><span className="text-emerald-200">Temperature:</span> {t.airTemp}°C</div>
+              <div><span className="text-emerald-200">Rainfall:</span> {t.rainToday} mm</div>
+            </div>
+
+            <div className="flex flex-col sm:items-end gap-2">
+              <button
+                onClick={() => handlePredict(t.ph, rootZone, t.airTemp, t.rainToday)}
+                disabled={predicting}
+                className="px-6 py-2.5 rounded-xl bg-white text-emerald-700 hover:bg-emerald-50 active:scale-95 text-sm font-bold shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
+              >
+                {predicting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <FlaskConical className="w-4 h-4" />}
+                <span>{predicting ? "Analyzing..." : "Predict Best Crop"}</span>
+              </button>
+
+              {predictedCrop && (
+                <div className="mt-2 text-center sm:text-right">
+                  <span className="text-xs text-emerald-100 uppercase tracking-wider font-bold">AI Recommendation:</span>
+                  <p className="text-2xl font-extrabold text-amber-300 drop-shadow-sm">{predictedCrop} 🌾</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
